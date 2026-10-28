@@ -14,7 +14,7 @@ Two audiences, equal priority:
 Both arrive cold, often on a phone, and give the page well under a minute before they decide.
 
 ## Product Purpose
-Biyahe is Ian Quilatan's portfolio home. Visitors drive a jeepney around a small low-poly island to five stops, each opening a project card, or skip straight to a plain project list. Success: the visitor sees real shipped work fast, remembers Ian, and reaches him on Upwork or LinkedIn.
+Biyahe is Ian Quilatan's portfolio home. Visitors drive a jeepney around a small low-poly island to five stops, each opening a project card, or skip straight to a plain project list. Success: the visitor sees real shipped work fast, remembers Ian, and reaches him on Upwork.
 
 ## Positioning
 The island is itself the proof: a frontend developer showing craft, performance discipline and accessibility in a playful, Filipino-rooted piece (jeepney, sari-sari store, carinderia, bangka) rather than a template grid.
@@ -30,7 +30,7 @@ The island is itself the proof: a frontend developer showing craft, performance 
 
 ## Brand Commitments
 - Site name "Biyahe" (Tagalog for "trip") leads the header; Ian's name and role sit under it.
-- Contact routes: Upwork profile https://www.upwork.com/freelancers/ianquilatan and LinkedIn https://www.linkedin.com/in/ianquilatan, plus GitHub https://github.com/ianquilatanwe.
+- Contact routes: Upwork profile https://www.upwork.com/freelancers/ianquilatan, plus GitHub https://github.com/ianquilatanwe. No LinkedIn or other contact details on the site (Ian, 2026-10-28): the site is linked from Upwork portfolio items, and Upwork bars off-platform contact details before a contract.
 
 ## Evidence on Hand
 - Project screenshots in `public/shots` (FashionHub, Sprig & Stone, Lumenfold, Recipe Finder).

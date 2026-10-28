@@ -1,5 +1,4 @@
 export const UPWORK = "https://www.upwork.com/freelancers/ianquilatan";
-export const LINKEDIN = "https://www.linkedin.com/in/ianquilatan";
 
 /** The five stops around the island. Each one is a real project (or the "about" pier). */
 export type Stop = {
@@ -80,7 +79,6 @@ export const stops: Stop[] = [
     stack: "React · Next.js · TypeScript · Tailwind CSS · Flutter",
     links: [
       { label: "Hire me on Upwork", href: UPWORK, primary: true },
-      { label: "LinkedIn", href: LINKEDIN },
       { label: "GitHub", href: "https://github.com/ianquilatanwe" },
     ],
     angle: 10,

@@ -138,7 +138,7 @@ A sunset-island palette: peach ground, ink line work, signboard yellow, jeepney 
 ### Neutral
 - **Asphalt Ink** (`ink`): all text on light grounds, every rim and ledge, the road, the dialog backdrop (at 50%), the focus outline. 10.2:1 on sky, 14.9:1 on paper.
 - **Sunset Sky** (`sky`): the island's sky and the page ground below it; also the browser theme colour.
-- **Ticket Paper** (`paper`): card faces, quiet signs (Project list, LinkedIn, GitHub), off-screen edge markers, the driving hint.
+- **Ticket Paper** (`paper`): card faces, quiet signs (Project list, GitHub), off-screen edge markers, the driving hint.
 - **Sunset Brown** (`muted`): secondary text (stack lines, "Live link coming soon"). 7.1:1 on sky, 10.4:1 on paper.
 
 ### Named Rules

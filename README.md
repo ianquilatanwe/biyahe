@@ -20,12 +20,12 @@ landmarks, each one a project. Prefer not to drive? "Skip the island" jumps stra
 ## How it's built
 
 Next.js 15, React 19, Tailwind CSS 4, and three.js through React Three Fiber. I didn't use any 3D models: every building,
-palm tree and the jeepney itself are built in code from boxes, cylinders and cones.
+palm tree and the jeepney itself are built in code from boxes, cylinders, cones and side-view outlines (the jeepney's curved fenders).
 
 - **The page works without the 3D part.** The name, the skip link and the project list are plain HTML that shows first. The 3D
   island loads after it. If a browser can't run it (no WebGL, or the code fails to download), a short message replaces the
   island and the project list still works.
-- **Phones first.** About 50 draw calls per frame, because all the static parts are merged into one mesh per colour. Sharpness is
+- **Phones first.** About 30 draw calls per frame, because all the static parts are merged into one mesh, with each part's colour (and baked shading) stored in its corners. Sharpness is
   capped on high-density screens and drops one step if a phone can't keep up. Nothing renders while the island is scrolled out of view.
 - **Accessible.** The 3D canvas is hidden from screen readers, and everything on it is also a real button or link. The project cards
   are native `<dialog>` elements. With "reduce motion" turned on, the bouncing, camera sway and water animation stop.

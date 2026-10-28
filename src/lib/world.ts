@@ -47,6 +47,13 @@ export const LANDMARKS: Circle[] = stops.map((s) => {
   return { ...stopPosition(s.angle, STOP_RADIUS + out), r };
 });
 
+/** Props off the stops that the jeepney bumps into too: the waiting shed on the far side. Drawn in Landmarks.tsx. */
+export const SHED = { angle: -105, radius: STOP_RADIUS + 1 };
+export const PROPS: Circle[] = [{ ...stopPosition(SHED.angle, SHED.radius), r: 1.5 }];
+
+/** Everything the jeepney bumps into: landmarks first (same order as stops), then props. */
+export const OBSTACLES: Circle[] = [...LANDMARKS, ...PROPS];
+
 /** Where the jeepney parks for a stop: on the island side of the landmark, facing it. */
 export function parkingSpot(angleDegrees: number): Point {
   return stopPosition(angleDegrees, STOP_RADIUS - 4.5);

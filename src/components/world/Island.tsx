@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import type { ThreeEvent } from "@react-three/fiber";
 import { CircleGeometry, CylinderGeometry } from "three";
 import { reachable } from "@/lib/driving";
-import { GRASS_RADIUS, ISLAND_RADIUS, LANDMARKS, wobble, type Point } from "@/lib/world";
+import { GRASS_RADIUS, ISLAND_RADIUS, OBSTACLES, wobble, type Point } from "@/lib/world";
 import { paint } from "./paint";
 import { Water } from "./Water";
 
@@ -31,13 +31,14 @@ function roughenEdge<T extends CylinderGeometry | CircleGeometry>(geo: T, minRad
 
 const SAND = "#f1d9a7";
 const GRASS = "#8cc56b";
+const ROAD = "#d6c59c";
 
 /** The ground: sea, sand, grass and the terminal pad. A click or tap on it drives there (onGround). */
 export function Island({ onGround }: { onGround: (p: Point) => void }) {
   // A tap near the water or beside a landmark still counts: the target moves to where the jeepney can actually reach.
   const tapGround = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
-    onGround(reachable({ x: e.point.x, z: e.point.z }, LANDMARKS));
+    onGround(reachable({ x: e.point.x, z: e.point.z }, OBSTACLES));
   };
 
   const sand = useMemo(() => roughenEdge(new CylinderGeometry(ISLAND_RADIUS, ISLAND_RADIUS + 3, 2, 40, 1), ISLAND_RADIUS - 1), []);
@@ -48,6 +49,10 @@ export function Island({ onGround }: { onGround: (p: Point) => void }) {
       <Water />
       <mesh geometry={sand} position-y={-1} material={paint(SAND)} onClick={tapGround} />
       <mesh geometry={grass} rotation-x={-Math.PI / 2} position-y={0.01} material={paint(GRASS)} onClick={tapGround} />
+      {/* The jeepney's route: a packed-earth loop past every stop (the parking spots sit on it). */}
+      <mesh rotation-x={-Math.PI / 2} position-y={0.015} material={paint(ROAD)} onClick={tapGround}>
+        <ringGeometry args={[13.3, 15.7, 72]} />
+      </mesh>
       {/* Terminal pad in the middle, where the trip starts. */}
       <mesh rotation-x={-Math.PI / 2} position-y={0.02} material={paint("#d8cbb0")} onClick={tapGround}>
         <circleGeometry args={[4, 24]} />

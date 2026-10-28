@@ -2,7 +2,7 @@
 
 Ian's 3D portfolio home: drive a jeepney around an island to five project stops.
 Next.js 15 + React 19 + three 0.186 + @react-three/fiber 9.8 + drei 10.7. Ian doesn't model:
-everything is built from code primitives. Distilled from the `threejs-react-three-fiber`,
+everything is built from code primitives (Ian chose code over Blender for the jeepney on 2026-10-28). Distilled from the `threejs-react-three-fiber`,
 `threejs-performance`, `camera-systems` and `codebase-design` skills; load them for detail.
 
 ## Structure
@@ -25,6 +25,8 @@ everything is built from code primitives. Distilled from the `threejs-react-thre
   `npm run build:test`, then the `biyahe-test` launch config (`npm run start:test`, port 3310).
   Never run a plain `npm run build` while `next dev` is open: it overwrites dev's `.next` and dev starts
   failing with "X is not a function". A server started from Bash outlives TaskStop on Windows; use the launch config.
+  For quick visual iteration, `npm run dev:test` (`biyahe-dev-test`, port 3320) hot-reloads on the same `.next-test`
+  folder: stop it before `build:test`, since they share that folder.
 
 ## The frame loop
 - Per-frame changes go through refs inside `useFrame`; never `setState` in the loop.
@@ -39,10 +41,18 @@ everything is built from code primitives. Distilled from the `threejs-react-thre
 - Canvas stays `flat` (no tone mapping, so the palette matches its hex values), `dpr` capped at 1.75
   (drei's `PerformanceMonitor` drops it to 1 if a device can't hold ~50 fps), and `frameloop="never"` while the
   island is scrolled away.
-- Use `paint(color)` for low-poly parts: one shared Lambert material per colour.
+- Use `paint(color)` for the few separate low-poly meshes (wheels, ground): one shared Lambert material per colour.
 - **Static parts go through `Batched`** (`components/world/Batched.tsx`): a build function adds boxes, cylinders,
-  rocks, and they're merged into one mesh per colour. The whole island (5 landmarks, 12 palms, rocks, props) and
-  the jeepney body cost about 30 draw calls this way. Only animated or unlit parts are separate meshes.
+  rocks and extruded side-view outlines (`sideways()` in `Jeepney.tsx`: curved fenders, wheel arches), and they're
+  merged into ONE mesh with the colour in each vertex. The whole island (5 landmarks, palms, props, tufts) and the
+  jeepney body cost 2 draw calls each this way (parts + shadows); the whole frame is ~30. Only animated or unlit parts
+  are separate meshes.
+- Baked shading lives in `Batch.add`: vertices darken towards the ground (fake ambient occlusion). Flat ground pieces
+  (court lines, slabs) go inside `b.flat(...)`, floating things use `<Batched ao={false}>`, or they turn grey.
+- Soft shadows: `b.shadow(at, size, height)` inside a build adds a blurred disc, offset away from the sun; all of a
+  batch's shadows are one transparent mesh. Moving things use `<SoftShadow>`.
+- Props the jeepney should bump into go in `PROPS` (world.ts); driving, taps and the check use `OBSTACLES`
+  (landmarks + props). `LANDMARKS` stays index-aligned with `stops`.
 - Click areas are invisible meshes (`<meshBasicMaterial visible={false} />`): raycast, but no draw call.
 - Tall things go on the far side of the island (angles near ±180): the camera looks from +z, so a tall
   landmark on the near side hides the jeepney parked at it.

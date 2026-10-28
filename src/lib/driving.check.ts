@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { aimPoint, autopilot, NO_INPUT, reachable, shoreLimit, step, type Car, type Input } from "./driving.ts";
 import { stops as realStops } from "./stops.ts";
-import { coastRadius, LANDMARKS, nearestStop, parkingSpot, stopPosition, type Circle, type Point } from "./world.ts";
+import { coastRadius, OBSTACLES, nearestStop, parkingSpot, stopPosition, type Circle, type Point } from "./world.ts";
 
 const DT = 1 / 60;
 const run = (car: Car, input: Input, seconds: number, obstacles: Circle[] = []) => {
@@ -60,9 +60,9 @@ for (const s of stops) {
 assert.equal(nearestStop(0, 0, stops), null, "the terminal is near no stop");
 
 // Taps are pulled out of landmarks and in from the water, so every target can be reached.
-for (const o of LANDMARKS) {
+for (const o of OBSTACLES) {
   for (const p of [o, { x: o.x + 0.3, z: o.z }, { x: o.x * 1.3, z: o.z * 1.3 }]) {
-    const q = reachable(p, LANDMARKS);
+    const q = reachable(p, OBSTACLES);
     assert.ok(Math.hypot(q.x - o.x, q.z - o.z) >= o.r + 1.3 - 1e-9, "tap target leaves the landmark");
     assert.ok(Math.hypot(q.x, q.z) <= shoreLimit(q.x, q.z) + 1e-9, "tap target stays on the island");
   }
@@ -74,14 +74,14 @@ assert.ok(Math.abs(across.x) > post.r + 1.3, "aims round a landmark in the way")
 assert.deepEqual(aimPoint({ x: 0, z: 0 }, { x: 0, z: -12 }, []), { x: 0, z: -12 }, "aims straight when the way is clear");
 
 // A tap between a landmark and the sea parks in front of the landmark, on the island side.
-for (const o of LANDMARKS) {
-  const behind = reachable({ x: o.x * 1.08, z: o.z * 1.08 }, LANDMARKS);
+for (const o of OBSTACLES) {
+  const behind = reachable({ x: o.x * 1.08, z: o.z * 1.08 }, OBSTACLES);
   assert.ok(Math.hypot(behind.x, behind.z) < Math.hypot(o.x, o.z), "tap behind a landmark parks in front of it");
 }
 
 // Stop-to-stop trips from awkward starts (random offset, heading and speed) around the real landmarks.
 const angles = realStops.map((s) => s.angle);
-const landmarks = LANDMARKS;
+const landmarks = OBSTACLES;
 let arrived = 0;
 for (let i = 0; i < 200; i++) {
   const from = parkingSpot(angles[i % 5]);
@@ -107,7 +107,7 @@ const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 const randomTap = () => {
   const a = rnd() * Math.PI * 2;
   const r = Math.sqrt(rnd()) * coastRadius(a);
-  return reachable({ x: Math.cos(a) * r, z: Math.sin(a) * r }, LANDMARKS);
+  return reachable({ x: Math.cos(a) * r, z: Math.sin(a) * r }, OBSTACLES);
 };
 const times: number[] = [];
 for (let i = 0; i < 500; i++) {
@@ -115,12 +115,12 @@ for (let i = 0; i < 500; i++) {
   const to = randomTap();
   let car: Car = { ...from, yaw: rnd() * Math.PI * 2, speed: 0, yawRate: 0 };
   for (let t = 0; t < 12; t += DT) {
-    const input = autopilot(car, to, LANDMARKS);
+    const input = autopilot(car, to, OBSTACLES);
     if (!input) {
       times.push(t);
       break;
     }
-    car = step(car, input, DT, LANDMARKS);
+    car = step(car, input, DT, OBSTACLES);
   }
 }
 times.sort((a, b) => a - b);
@@ -132,24 +132,24 @@ assert.ok(p95 < 6.5, `95% of tap trips arrive within 6.5 s (got ${p95.toFixed(1)
 // "never round the back" rule and glancing bumps, about 1 in 14 of these got wedged or crawled.
 let besideTrips = 0;
 let besideArrived = 0;
-for (const o of LANDMARKS) {
+for (const o of OBSTACLES) {
   for (let deg = 0; deg < 360; deg += 20) {
     for (const off of [0.1, 0.6]) {
       const a = (deg * Math.PI) / 180;
       const d = o.r + 1.3 + off;
-      const from = reachable({ x: o.x + Math.cos(a) * d, z: o.z + Math.sin(a) * d }, LANDMARKS);
-      const to = reachable({ x: o.x - Math.cos(a) * (d + 1), z: o.z - Math.sin(a) * (d + 1) }, LANDMARKS);
+      const from = reachable({ x: o.x + Math.cos(a) * d, z: o.z + Math.sin(a) * d }, OBSTACLES);
+      const to = reachable({ x: o.x - Math.cos(a) * (d + 1), z: o.z - Math.sin(a) * (d + 1) }, OBSTACLES);
       if (Math.hypot(to.x - from.x, to.z - from.z) < 3) continue;
       for (let y = 0; y < 4; y++) {
         let car: Car = { ...from, yaw: (y * Math.PI) / 2, speed: 0, yawRate: 0 };
         besideTrips++;
         for (let t = 0; t < 12; t += DT) {
-          const input = autopilot(car, to, LANDMARKS);
+          const input = autopilot(car, to, OBSTACLES);
           if (!input) {
             besideArrived++;
             break;
           }
-          car = step(car, input, DT, LANDMARKS);
+          car = step(car, input, DT, OBSTACLES);
         }
       }
     }

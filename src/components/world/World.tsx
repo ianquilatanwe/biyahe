@@ -7,7 +7,7 @@ import { MathUtils, Vector3 } from "three";
 import { autopilot, NO_INPUT, step, type Car } from "@/lib/driving";
 import { stops } from "@/lib/stops";
 import { tuning } from "@/lib/tuning";
-import { LANDMARKS, nearestStop } from "@/lib/world";
+import { nearestStop, OBSTACLES } from "@/lib/world";
 import type { Destination } from "../IslandExperience";
 import { Island } from "./Island";
 import { Jeepney, type JeepneyParts } from "./Jeepney";
@@ -68,7 +68,7 @@ function Driver({ driving, destination, onNear, onArrive }: DriverProps) {
     } else if (trip) {
       tripTime.current += dt;
       const timedOut = tripTime.current >= GIVE_UP_AFTER;
-      const auto = timedOut ? null : autopilot(car.current, trip, LANDMARKS);
+      const auto = timedOut ? null : autopilot(car.current, trip, OBSTACLES);
       if (auto) input = auto;
       else {
         destination.current = null; // arrived (or gave up)
@@ -77,7 +77,7 @@ function Driver({ driving, destination, onNear, onArrive }: DriverProps) {
       }
     }
 
-    const c = (car.current = step(car.current, input, dt, LANDMARKS));
+    const c = (car.current = step(car.current, input, dt, OBSTACLES));
 
     // Tell the page which stop is in range, only when it changes (a React update, not every frame).
     const id = nearestStop(c.x, c.z, stops)?.id ?? null;
@@ -147,10 +147,11 @@ export default function World({ active, onGoTo, onGoToStop, nearId, onOpen, onRe
       gl={{ antialias: true, powerPreference: "high-performance" }}
     >
       <color attach="background" args={[SKY]} />
-      <fog attach="fog" args={[SKY, 55, 140]} />
-      {/* Near-white light with only a hint of warmth: tinted light multiplied into every colour and turned the sand orange. */}
-      <hemisphereLight args={["#fffaf0", "#6f9a62", 1.35]} />
-      <directionalLight position={[-20, 30, 12]} intensity={2.0} color="#fff3e2" />
+      <fog attach="fog" args={[SKY, 70, 160]} />
+      {/* Late afternoon: a lower, warmer sun from the west for longer light-and-shade, and a cooler sky fill.
+          Kept near-white: strongly tinted light multiplies into every colour and turned the sand orange. */}
+      <hemisphereLight args={["#f3f6ff", "#6f9a62", 1.25]} />
+      <directionalLight position={[-26, 22, 14]} intensity={2.25} color="#ffe9cc" />
       <Island onGround={onGoTo} />
       <Landmarks onStop={onGoToStop} />
       <Driver {...driver} />

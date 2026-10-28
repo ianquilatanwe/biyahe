@@ -9,6 +9,7 @@
     "start": "next start",
     "build:test": "next build",
     "start:test": "next start -p 3310",
+    "dev:test": "next dev -p 3320",
     "lint": "eslint"
   },
   "dependencies": {

@@ -12,8 +12,8 @@ export const tuning = {
   drag: 2.2, // how fast it coasts to a stop with no throttle
   turn: 2.3, // radians/s at full lock and speed
   // body
-  lean: 0.01, // how far the body leans out of turns
-  bounce: 0.012, // suspension jiggle at speed
+  lean: 0.005, // how far the body leans out of turns
+  bounce: 0.03, // suspension jiggle at speed
   // camera
   cameraHeight: 12,
   cameraDistance: 20,

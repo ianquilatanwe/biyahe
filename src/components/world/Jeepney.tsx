@@ -54,12 +54,16 @@ function fenderShape() {
   return s;
 }
 
-/** The passenger body's lower side panel, from the back to the windscreen, with the rear wheel arch cut out. */
+/**
+ * The passenger body's lower side panel, from the back to the windscreen, with both wheel arches cut out. Its front
+ * edge (z = 1.35) is behind the front axle, so only the back of the front arch is cut; the fender covers the rest.
+ */
 function sidePanelShape() {
   const s = new Shape();
   s.moveTo(-2.35, 0.58);
   s.absarc(REAR_AXLE, WHEEL_R, 0.55, Math.PI - 0.3, 0.3, true);
-  s.lineTo(1.35, 0.58);
+  // Along the bottom to the front arch, then up its curve to where it meets the panel's front edge.
+  s.absarc(FRONT_AXLE, WHEEL_R, 0.55, Math.PI - 0.3, Math.PI - Math.acos((FRONT_AXLE - 1.35) / 0.55), true);
   s.lineTo(1.35, 1.27);
   s.lineTo(-2.35, 1.27);
   s.closePath();
@@ -84,7 +88,7 @@ function horse(b: Batch, at: Vec) {
 /** Everything on the body that only moves with the body: merged into one mesh. */
 function buildBody(b: Batch) {
   // Underneath: chassis rails, so you don't see daylight under the body.
-  b.box(INSIDE, [1.5, 0.22, 4.6], [0, 0.55, 0.1]);
+  b.box(INSIDE, [1.36, 0.22, 4.6], [0, 0.55, 0.1]); // narrower than the track, so it clears the tyres' inner faces
 
   // The nose: long stainless hood with a chrome ridge and louvres, chrome grille, bumper, horses.
   b.box(STEEL, [1.24, 0.47, 1.2], [0, 0.985, 1.97]);
@@ -103,7 +107,6 @@ function buildBody(b: Batch) {
     sideways(b, STEEL, fenderShape(), x, 0.36); // front fender
     sideways(b, STEEL, sidePanelShape(), side * 0.985, 0.06); // passenger side panel
     b.box(CHROME, [0.03, 0.05, 3.72], [side * 1.01, 1.28, -0.5]); // belt-line trim (the paint job is drawn on top: see SideArt)
-    b.box(CHROME, [0.34, 0.05, 0.75], [side * 0.83, 0.6, 0.98]); // driver's running board
     // Window pillars: the side windows are open, so you see into the dark cabin between them.
     for (let z = 1.3; z > -2.4; z -= 0.52) b.box(STEEL, [0.05, 0.48, 0.07], [side * 0.97, 1.5, z]);
     // Mud flaps behind both wheels.
@@ -162,7 +165,7 @@ function buildBody(b: Batch) {
  */
 function SideArt() {
   const { geometry, material } = useMemo(() => {
-    const map = makeSideArt(REAR_AXLE, 0.58, WHEEL_R);
+    const map = makeSideArt([REAR_AXLE, FRONT_AXLE], 0.58, WHEEL_R);
     const w = ART.front - ART.back;
     const h = ART.top - ART.bottom;
     const z = (ART.front + ART.back) / 2;

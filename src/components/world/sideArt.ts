@@ -11,9 +11,9 @@ const H = Math.round((ART.top - ART.bottom) * PX);
  * The paint job on the jeepney's stainless sides: colour stripes, swirls and the name, like the hand-painted
  * art on a real jeepney. Drawn once on a canvas (no image file). The canvas holds two rows: the right side
  * (front at the left of the row) and the left side (front at the right), so the name sits behind the front
- * door on both sides and still reads the right way round. The rear wheel arch is left clear, so the stainless shows through around it.
+ * door on both sides and still reads the right way round. Both wheel arches are left clear, so nothing is painted over the tyres.
  */
-export function makeSideArt(rearAxle: number, archRadius: number, wheelY: number) {
+export function makeSideArt(axles: number[], archRadius: number, wheelY: number) {
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H * 2;
@@ -60,11 +60,13 @@ export function makeSideArt(rearAxle: number, archRadius: number, wheelY: number
     ctx.strokeText("Biyahe", u(-0.08), v(0.9));
     ctx.fillStyle = "#c41e30";
     ctx.fillText("Biyahe", u(-0.08), v(0.9));
-    // Clear the rear wheel arch.
+    // Clear the wheel arches.
     ctx.globalCompositeOperation = "destination-out";
-    ctx.beginPath();
-    ctx.arc(u(rearAxle), v(wheelY), archRadius * PX, 0, Math.PI * 2);
-    ctx.fill();
+    for (const z of axles) {
+      ctx.beginPath();
+      ctx.arc(u(z), v(wheelY), archRadius * PX, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.restore();
   };
 

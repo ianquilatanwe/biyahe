@@ -81,19 +81,18 @@ for (const o of OBSTACLES) {
 
 // Stop-to-stop trips from awkward starts (random offset, heading and speed) around the real landmarks.
 const angles = realStops.map((s) => s.angle);
-const landmarks = OBSTACLES;
 let arrived = 0;
 for (let i = 0; i < 200; i++) {
   const from = parkingSpot(angles[i % 5]);
   let car: Car = { x: from.x + Math.sin(i) * 3, z: from.z + Math.cos(i * 1.7) * 3, yaw: i * 0.37, speed: (i % 7) - 2, yawRate: 0 };
   const to = parkingSpot(angles[(i * 3 + 1) % 5]);
   for (let t = 0; t < 12; t += DT) {
-    const input = autopilot(car, to, landmarks);
+    const input = autopilot(car, to, OBSTACLES);
     if (!input) {
       arrived++;
       break;
     }
-    car = step(car, input, DT, landmarks);
+    car = step(car, input, DT, OBSTACLES);
   }
 }
 // The frame loop gives up after 12 s, so a rare miss just stops the trip.

@@ -4,11 +4,11 @@ import { useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { BufferAttribute, ConeGeometry, type Group } from "three";
 import { stops } from "@/lib/stops";
-import { coastRadius, GRASS_RADIUS, LANDMARKS, SHED, stopPosition } from "@/lib/world";
+import { coastRadius, GRASS_RADIUS, LANDMARKS, OBSTACLES, SHED, stopPosition } from "@/lib/world";
 import { Batched, type Batch, type Vec } from "./Batched";
 import { useCalm } from "./useCalm";
 
-// The island's shared palette. Reusing a colour costs nothing: each colour is one draw call for the whole island.
+// The island's shared palette. Colours live in the merged mesh's vertices, so adding one costs no draw call.
 const WOOD = "#8a5a3b";
 const WOOD_DARK = "#5e4331";
 const CONCRETE = "#d8cbb0";
@@ -121,7 +121,6 @@ const LANDMARK_MODELS: Record<string, (b: Batch) => void> = {
     b.box(ORANGE, [1.6, 0.08, 0.07], [0, 2.0, -0.26]);
     for (const x of [-1, 0, 1]) b.cyl(BLUE, [0.2, 0.17, 0.45], [x, 0.23, -0.15]); // stools
     banderitas(b, [-1.6, 2.15, -0.28], [1.6, 2.15, -0.28], 0.35); // fiesta flags along the front
-    tricycle(b, [2.45, 0, -1.3], -0.25); // a tricycle waiting while its driver eats
   },
 
   // About: a pier running out over the water from a gate with a sign. The bangka is drawn separately (it bobs).
@@ -181,10 +180,10 @@ function tricycle(b: Batch, at: Vec, yaw: number) {
   });
 }
 
-/** A barangay waiting shed: concrete bench under a painted roof, open at the front. Faces +z. */
+/** A barangay waiting shed: concrete bench under a painted roof, open at the front, a tricycle waiting for fares. Faces +z. */
 function waitingShed(b: Batch) {
   b.shadow([0, -0.1], [1.6, 1.0], 2.2);
-  b.flat(() => b.box(CONCRETE, [2.6, 0.1, 1.6], [0, 0.05, 0]));
+  b.flat(() => b.box(CONCRETE, [2.6, 0.03, 1.6], [0, 0.015, 0])); // thin, so the shadow (y 0.04) lies on top of it
   for (const x of [-1.15, 1.15]) for (const z of [0.65, -0.65]) b.box(STEEL, [0.08, 2.1, 0.08], [x, 1.1, z]);
   b.box(CREAM, [2.4, 1.1, 0.08], [0, 0.65, -0.68]); // back wall
   b.box(TEAL, [2.4, 0.18, 0.09], [0, 1.0, -0.64]);
@@ -194,20 +193,21 @@ function waitingShed(b: Batch) {
   b.box(WHITE, [1.6, 0.3, 0.05], [0, 1.95, 0.85]); // name board
   b.box(RED, [1.4, 0.06, 0.06], [0, 1.95, 0.88]);
   banderitas(b, [-1.3, 2.05, 0.75], [1.3, 2.05, 0.75], 0.2, 7);
+  tricycle(b, [0.3, 0, 1.6], Math.PI / 2); // parked across the front; PROPS in world.ts covers it
 }
 
 /** A half court painted on a concrete slab under the beach hoop: the key, the free-throw circle, the arc. Faces +z. */
 function court(b: Batch) {
   b.flat(() => {
     b.box(CONCRETE, [6.0, 0.03, 4.4], [0, 0.015, 1.8]);
-    const line = (w: number, d: number, x: number, z: number) => b.box(LINE, [w, 0.012, d], [x, 0.035, z]);
+    const line = (w: number, d: number, x: number, z: number) => b.box(LINE, [w, 0.012, d], [x, 0.03, z]); // top 0.036, under the shadows
     line(1.8, 0.06, 0, 2.9); // free-throw line
     for (const x of [-0.9, 0.9]) line(0.06, 2.9, x, 1.45); // sides of the key
     line(5.8, 0.06, 0, -0.35); // baseline
     for (let i = 0; i <= 16; i++) {
       const a = (i / 16) * Math.PI;
-      if (i < 9) b.box(LINE, [0.22, 0.012, 0.06], [Math.cos(a * 2) * 0.9, 0.035, 2.9 + Math.sin(a * 2) * 0.9], [0, -a * 2 + Math.PI / 2, 0]); // free-throw circle
-      b.box(LINE, [0.55, 0.012, 0.06], [Math.cos(a) * 2.6, 0.035, -0.1 + Math.sin(a) * 1.6], [0, -a + Math.PI / 2, 0]); // three-point arc
+      if (i < 9) b.box(LINE, [0.22, 0.012, 0.06], [Math.cos(a * 2) * 0.9, 0.03, 2.9 + Math.sin(a * 2) * 0.9], [0, -a * 2 + Math.PI / 2, 0]); // free-throw circle
+      b.box(LINE, [0.55, 0.012, 0.06], [Math.cos(a) * 2.6, 0.03, -0.1 + Math.sin(a) * 1.6], [0, -a + Math.PI / 2, 0]); // three-point arc
     }
   });
 }
@@ -221,7 +221,7 @@ function tufts(b: Batch) {
     const r = 5 + rnd() * (GRASS_RADIUS - 6.5);
     if (r > 12.8 && r < 16) continue; // keep the road clear
     const at: Vec = [Math.sin(a) * r, 0, Math.cos(a) * r];
-    if (LANDMARKS.some((o) => Math.hypot(o.x - at[0], o.z - at[2]) < o.r + 0.5)) continue;
+    if (OBSTACLES.some((o) => Math.hypot(o.x - at[0], o.z - at[2]) < o.r + 0.5)) continue;
     // Three thin blades leaning apart.
     b.place(at, rnd() * 6, () => {
       for (let k = 0; k < 3; k++) b.cone(GRASS_TUFT, 0.045, 0.3, [Math.sin(k * 2.1) * 0.06, 0.13, Math.cos(k * 2.1) * 0.06], [Math.cos(k * 2.1) * 0.35, 0, -Math.sin(k * 2.1) * 0.35], 3);

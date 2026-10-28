@@ -45,8 +45,8 @@ everything is built from code primitives (Ian chose code over Blender for the je
 - **Static parts go through `Batched`** (`components/world/Batched.tsx`): a build function adds boxes, cylinders,
   rocks and extruded side-view outlines (`sideways()` in `Jeepney.tsx`: curved fenders, wheel arches), and they're
   merged into ONE mesh with the colour in each vertex. The whole island (5 landmarks, palms, props, tufts) and the
-  jeepney body cost 2 draw calls each this way (parts + shadows); the whole frame is ~30. Only animated or unlit parts
-  are separate meshes.
+  jeepney body cost 2 draw calls each this way (parts + shadows); the whole frame is ~30. Only animated, unlit,
+  textured (the jeepney's side art) or clickable ground parts (the road ring) are separate meshes.
 - Baked shading lives in `Batch.add`: vertices darken towards the ground (fake ambient occlusion). Flat ground pieces
   (court lines, slabs) go inside `b.flat(...)`, floating things use `<Batched ao={false}>`, or they turn grey.
 - Soft shadows: `b.shadow(at, size, height)` inside a build adds a blurred disc, offset away from the sun; all of a
@@ -77,6 +77,8 @@ everything is built from code primitives (Ian chose code over Blender for the je
   plus trips from right beside each landmark to its far side (98% must arrive).
   Every landmark's back (the strip to the sea) is too narrow to drive: `aimPoint` never plans round it, and a tap in
   its shadow parks in front. Bumps only cost the head-on part of the speed, so a jeepney sliding along a wall can still steer.
+- The card's close button fills the red strip's height and sits by the dialog's edge, which clips anything outside it:
+  its focus ring is drawn inside the button (yellow, inset), not the page's outer ring plus halo.
 - In-world sign tails keep their base flat on the plate edge and lean only the tip (CSS skew); rotating the whole
   tail lifts one end of the base off the plate.
 

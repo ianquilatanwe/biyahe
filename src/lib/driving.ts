@@ -14,7 +14,8 @@ export type Input = { throttle: number; steer: number };
 
 export const NO_INPUT: Input = { throttle: 0, steer: 0 };
 
-/** How far inside the water's edge the jeepney's centre must stay: half its length plus a little sand. */
+/** How far inside the sand's edge the jeepney's centre must stay: about half its length (the bumper, 2.8 out,
+ * can just reach the sloping sand, which meets the water 0.9 further on). */
 const SHORE_MARGIN = 2.6;
 /** The jeepney as a circle, for bumping into landmarks. */
 const CAR_RADIUS = 1.3;

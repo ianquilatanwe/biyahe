@@ -1,7 +1,7 @@
 import { MeshLambertMaterial } from "three";
 
-// ponytail: one shared material per colour cuts GPU state changes, not draw calls; merge
-// static geometry (BufferGeometryUtils.mergeGeometries) if renderer.info shows calls climbing.
+// For the few meshes that stay separate (wheels, ground). Static parts don't use this: Batched merges
+// them into one vertex-coloured mesh.
 const cache = new Map<string, MeshLambertMaterial>();
 
 /**

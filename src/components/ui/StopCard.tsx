@@ -37,7 +37,7 @@ export function StopCard({ stop, onClose }: { stop: Stop | null; onClose: () => 
           label={stopLabel(stop)}
           titleId="stop-title"
           strip={
-            <button type="button" onClick={() => dialog.current?.close()} className="-mr-3 grid size-11 place-items-center rounded-lg hover:bg-white/15" aria-label="Close">
+            <button type="button" onClick={() => dialog.current?.close()} className="-mr-3 grid size-11 place-items-center rounded-lg hover:bg-white/15 focus-visible:shadow-none! focus-visible:outline-offset-[-5px]! focus-visible:outline-yellow!" aria-label="Close">
               <CloseIcon />
             </button>
           }

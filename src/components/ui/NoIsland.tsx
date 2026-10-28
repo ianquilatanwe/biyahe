@@ -12,8 +12,9 @@ export function NoIsland() {
 }
 
 /**
- * If the 3D part fails (its code didn't download on a bad connection, or WebGL crashed), show
+ * If the 3D part fails (its code didn't download on a bad connection, no WebGL, or a crash), show
  * the message above instead of a loading screen that never goes away. The rest of the page keeps working.
+ * This also covers a browser without WebGL: the 3D renderer throws when it can't get a WebGL context.
  */
 export class IslandBoundary extends Component<{ children: ReactNode; onFail: () => void }, { failed: boolean }> {
   state = { failed: false };

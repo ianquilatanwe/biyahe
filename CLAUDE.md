@@ -36,8 +36,9 @@ everything is built from code primitives. Distilled from the `threejs-react-thre
 - The camera updates after the jeepney moves, in the same frame callback.
 
 ## Rendering and performance (phones first)
-- Canvas stays `flat` (no tone mapping, so the palette matches its hex values), `dpr` capped at 1.75,
-  and `frameloop="never"` while the island is scrolled away.
+- Canvas stays `flat` (no tone mapping, so the palette matches its hex values), `dpr` capped at 1.75
+  (drei's `PerformanceMonitor` drops it to 1 if a device can't hold ~50 fps), and `frameloop="never"` while the
+  island is scrolled away.
 - Use `paint(color)` for low-poly parts: one shared Lambert material per colour.
 - **Static parts go through `Batched`** (`components/world/Batched.tsx`): a build function adds boxes, cylinders,
   rocks, and they're merged into one mesh per colour. The whole island (5 landmarks, 12 palms, rocks, props) and
@@ -57,7 +58,11 @@ everything is built from code primitives. Distilled from the `threejs-react-thre
 - The canvas wrapper is `aria-hidden`; nothing focusable may live inside it.
 - The header comes before the island in the source, so "Skip the island" is the first Tab stop.
 - `<Loading>` covers the island until its second frame; `IslandBoundary` swaps in the plain message if the
-  3D code fails to load or crashes, so the loader can never get stuck.
+  3D code fails to load, there's no WebGL (the renderer throws), or it crashes, so the loader can never get stuck.
+  It also hides the on-screen controls, which would drive a jeepney that isn't there.
+- Don't put logic in `<Canvas fallback>`: fiber always mounts it (as the `<canvas>` element's children), so its
+  effects run on every load, WebGL or not.
+- Stop buttons announce the drive in a polite live region; the card takes focus when it opens.
 - Every stop is reachable without driving skill (stop list buttons, from day 2).
 - Reduced motion (`useCalm`, read live): no bounce, lean, look-ahead or ambient animation.
 - Keys only drive while the island is on screen; arrows scroll the page otherwise.

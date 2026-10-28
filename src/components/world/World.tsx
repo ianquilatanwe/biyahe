@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, type RefObject } from "react";
+import { useMemo, useRef, useState, type RefObject } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { PerformanceMonitor } from "@react-three/drei";
 import { MathUtils, Vector3 } from "three";
 import { autopilot, NO_INPUT, step, type Car } from "@/lib/driving";
 import { stops } from "@/lib/stops";
 import { tuning } from "@/lib/tuning";
 import { LANDMARKS, nearestStop } from "@/lib/world";
 import type { Destination } from "../IslandExperience";
-import { NoIsland } from "../ui/NoIsland";
 import { Island } from "./Island";
 import { Jeepney, type JeepneyParts } from "./Jeepney";
 import { Landmarks } from "./Landmarks";
@@ -118,29 +118,24 @@ function FirstFrames({ onReady }: { onReady: () => void }) {
   return null;
 }
 
-function NoWebGL({ onReady }: { onReady: () => void }) {
-  useEffect(onReady, [onReady]); // nothing to wait for: lift the loading screen so this message shows
-  return <NoIsland />;
-}
-
 type WorldProps = DriverProps & {
   /** false while the island is scrolled out of view: nothing renders. */
   active: boolean;
   onGoTo: (d: Destination) => void;
   onGoToStop: (id: string) => void;
-  /** Called once, when the island has drawn its first frames (or WebGL turned out to be missing). */
+  /** Called once, when the island has drawn its first frames. No WebGL throws instead, and IslandBoundary catches it. */
   onReady: () => void;
 };
 
 export default function World({ active, onGoTo, onGoToStop, onReady, ...driver }: WorldProps) {
+  const [sharpness, setSharpness] = useState(1.75);
   return (
     <Canvas
       flat // no filmic tone mapping: the flat colours show exactly as their hex values
       frameloop={active ? "always" : "never"}
-      dpr={[1, 1.75]} // cap sharpness on high-density phones: the biggest single saving on mobile
+      dpr={[1, sharpness]} // cap sharpness on high-density phones: the biggest single saving on mobile
       camera={{ fov: 40, near: 0.5, far: 300, position: [START.x, tuning.cameraHeight, START.z + tuning.cameraDistance] }}
       gl={{ antialias: true, powerPreference: "high-performance" }}
-      fallback={<NoWebGL onReady={onReady} />}
     >
       <color attach="background" args={[SKY]} />
       <fog attach="fog" args={[SKY, 55, 140]} />
@@ -151,6 +146,9 @@ export default function World({ active, onGoTo, onGoToStop, onReady, ...driver }
       <Landmarks onStop={onGoToStop} />
       <Driver {...driver} />
       <FirstFrames onReady={onReady} />
+      {/* If a slow phone keeps dropping below ~50 fps, draw at 1 pixel per CSS pixel: fewer pixels, steadier frames.
+          ponytail: one step down only; add more steps if real phones still struggle at dpr 1. */}
+      <PerformanceMonitor onDecline={() => setSharpness(1)} />
     </Canvas>
   );
 }

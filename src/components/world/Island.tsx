@@ -1,11 +1,11 @@
 "use client";
 
 import { useMemo, useRef } from "react";
-import { useFrame, type ThreeEvent } from "@react-three/fiber";
+import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { CircleGeometry, CylinderGeometry, type Mesh } from "three";
-import { shoreLimit } from "@/lib/driving";
+import { reachable } from "@/lib/driving";
 import { stops } from "@/lib/stops";
-import { GRASS_RADIUS, ISLAND_RADIUS, stopPosition, wobble, type Point } from "@/lib/world";
+import { GRASS_RADIUS, ISLAND_RADIUS, LANDMARKS, stopPosition, wobble, type Point } from "@/lib/world";
 import { paint } from "./paint";
 import { useCalm } from "./useCalm";
 
@@ -32,18 +32,17 @@ function roughenEdge<T extends CylinderGeometry | CircleGeometry>(geo: T, minRad
 
 const SIGN_COLOURS = ["#d62839", "#2f8f5b", "#ffb347", "#e07a2e", "#1d4e89"];
 
-const setCursor = (c: string) => () => (document.body.style.cursor = c);
-
 /** onGround: a click or tap on the island (drive there). onStop: a click on a stop's sign (drive there and open it). */
 export function Island({ onGround, onStop }: { onGround: (p: Point) => void; onStop: (id: string) => void }) {
-  // A tap near the water still counts: the target is pulled in to where the jeepney can actually reach.
+  // A tap near the water or beside a landmark still counts: the target moves to where the jeepney can actually reach.
   const tapGround = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
-    const { x, z } = e.point;
-    const r = Math.hypot(x, z);
-    const k = Math.min(1, shoreLimit(x, z) / r);
-    onGround({ x: x * k, z: z * k });
+    onGround(reachable({ x: e.point.x, z: e.point.z }, LANDMARKS));
   };
+  // The hand cursor goes on the canvas, not the page: scrolling away from a hovered landmark fires no
+  // "pointer out", and a body cursor would then stick over the project list.
+  const canvas = useThree((s) => s.gl.domElement);
+  const setCursor = (c: string) => () => (canvas.style.cursor = c);
 
   const sand = useMemo(() => roughenEdge(new CylinderGeometry(ISLAND_RADIUS, ISLAND_RADIUS + 3, 2, 40, 1), ISLAND_RADIUS - 1), []);
   const grass = useMemo(() => roughenEdge(new CircleGeometry(GRASS_RADIUS, 40), GRASS_RADIUS - 0.5), []);

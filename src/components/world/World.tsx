@@ -6,7 +6,7 @@ import { MathUtils, Vector3 } from "three";
 import { autopilot, NO_INPUT, step, type Car } from "@/lib/driving";
 import { stops } from "@/lib/stops";
 import { tuning } from "@/lib/tuning";
-import { LANDMARK_RADIUS, nearestStop, stopPosition } from "@/lib/world";
+import { LANDMARKS, nearestStop } from "@/lib/world";
 import type { Destination } from "../IslandExperience";
 import { Island } from "./Island";
 import { Jeepney, type JeepneyParts } from "./Jeepney";
@@ -15,7 +15,6 @@ import { useKeys } from "./useKeys";
 
 const SKY = "#f6c9a1";
 const START: Car = { x: 0, z: 2, yaw: Math.PI, speed: 0, yawRate: 0 }; // on the terminal pad, facing away from the camera
-const OBSTACLES = stops.map((s) => ({ ...stopPosition(s.angle), r: LANDMARK_RADIUS }));
 const GIVE_UP_AFTER = 12; // seconds: an unreachable destination never leaves the jeepney circling
 
 type DriverProps = {
@@ -54,20 +53,22 @@ function Driver({ driving, destination, onNear, onArrive }: DriverProps) {
     }
     if (!driving) {
       input = NO_INPUT;
+      destination.current = null; // a card opened mid-trip ends the trip: closing it must not drive off on its own
     } else if (input.throttle || input.steer) {
       destination.current = null;
     } else if (trip) {
       tripTime.current += dt;
       const timedOut = tripTime.current >= GIVE_UP_AFTER;
-      const auto = timedOut ? null : autopilot(car.current, trip, OBSTACLES);
+      const auto = timedOut ? null : autopilot(car.current, trip, LANDMARKS);
       if (auto) input = auto;
       else {
         destination.current = null; // arrived (or gave up)
-        if (!timedOut && trip.stopId) onArrive(trip.stopId);
+        // Open the card even after giving up: the visitor asked for that stop, and the card doesn't need the jeepney there.
+        if (trip.stopId) onArrive(trip.stopId);
       }
     }
 
-    const c = (car.current = step(car.current, input, dt, OBSTACLES));
+    const c = (car.current = step(car.current, input, dt, LANDMARKS));
 
     // Tell the page which stop is in range, only when it changes (a React update, not every frame).
     const id = nearestStop(c.x, c.z, stops)?.id ?? null;

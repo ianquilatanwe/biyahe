@@ -10,7 +10,7 @@ everything is built from code primitives. Distilled from the `threejs-react-thre
   (driving, shoreline, stop positions, proximity, tap-to-go targets) is a pure function in `src/lib`
   with no three.js or React, and has a `*.check.ts` beside it (`node src/lib/<name>.check.ts`).
   Components only draw and wire input.
-- **One source of truth for layout:** island sizes, `wobble()`, `stopPosition()` live in `src/lib/world.ts`.
+- **One source of truth for layout:** island sizes, `wobble()`, `stopPosition()` and the `LANDMARKS` colliders live in `src/lib/world.ts`.
   The drawing and the logic both import them, so what you see is where things collide.
 - **Content in `src/lib/stops.ts`.** The 3D stops and the HTML project list read the same data.
 
@@ -19,7 +19,9 @@ everything is built from code primitives. Distilled from the `threejs-react-thre
   New feel constants go there, with a range in `TuningPanel.tsx`.
 - **The frame loop owns the game, React owns the HUD.** Shared state crosses once per change:
   the destination is a ref the loop reads; the loop calls `onNear`/`onArrive` only when they change.
-- Run `next start` for browser tests, and never with `next dev` running in the same folder: both use `.next`.
+- Browser tests run a production build in its own folder, so `next dev` (on `.next`) can stay open:
+  `NEXT_DIST_DIR=.next-test npm run build`, then `NEXT_DIST_DIR=.next-test npx next start -p 3300`.
+  A plain `npm run build` while `next dev` runs overwrites dev's files and breaks it.
 
 ## The frame loop
 - Per-frame changes go through refs inside `useFrame`; never `setState` in the loop.

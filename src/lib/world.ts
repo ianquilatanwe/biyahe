@@ -2,6 +2,8 @@
  * The island's layout rules, shared by the drawing (Island.tsx) and the logic (driving,
  * proximity, tap-to-drive). Angles are world angles: atan2(z, x).
  */
+import { stops } from "./stops.ts";
+
 export type Point = { x: number; z: number };
 export type Circle = Point & { r: number };
 
@@ -26,6 +28,9 @@ export function stopPosition(angleDegrees: number, radius = STOP_RADIUS): Point 
   const a = (angleDegrees * Math.PI) / 180;
   return { x: Math.sin(a) * radius, z: Math.cos(a) * radius };
 }
+
+/** What the jeepney bumps into: one circle per stop's landmark. Driving, tap targets and the check all use this. */
+export const LANDMARKS: Circle[] = stops.map((s) => ({ ...stopPosition(s.angle), r: LANDMARK_RADIUS }));
 
 /** Where the jeepney parks for a stop: on the island side of the landmark, facing it. */
 export function parkingSpot(angleDegrees: number): Point {

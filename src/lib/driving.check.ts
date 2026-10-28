@@ -1,7 +1,8 @@
 // Quick self-check for the driving and layout rules. Run: node src/lib/driving.check.ts
 import assert from "node:assert/strict";
-import { autopilot, NO_INPUT, shoreLimit, step, type Car, type Input } from "./driving.ts";
-import { nearestStop, parkingSpot, stopPosition, type Circle, type Point } from "./world.ts";
+import { autopilot, NO_INPUT, reachable, shoreLimit, step, type Car, type Input } from "./driving.ts";
+import { stops as realStops } from "./stops.ts";
+import { LANDMARKS, nearestStop, parkingSpot, stopPosition, type Circle, type Point } from "./world.ts";
 
 const DT = 1 / 60;
 const run = (car: Car, input: Input, seconds: number, obstacles: Circle[] = []) => {
@@ -58,9 +59,18 @@ for (const s of stops) {
 }
 assert.equal(nearestStop(0, 0, stops), null, "the terminal is near no stop");
 
-// Stop-to-stop trips from awkward starts (random offset, heading and speed) with landmarks in the way.
-const angles = [150, 80, 10, -70, -140];
-const landmarks: Circle[] = angles.map((a) => ({ ...stopPosition(a), r: 1.2 }));
+// Taps are pulled out of landmarks and in from the water, so every target can be reached.
+for (const o of LANDMARKS) {
+  for (const p of [o, { x: o.x + 0.3, z: o.z }, { x: o.x * 1.3, z: o.z * 1.3 }]) {
+    const q = reachable(p, LANDMARKS);
+    assert.ok(Math.hypot(q.x - o.x, q.z - o.z) >= o.r + 1.3 - 1e-9, "tap target leaves the landmark");
+    assert.ok(Math.hypot(q.x, q.z) <= shoreLimit(q.x, q.z) + 1e-9, "tap target stays on the island");
+  }
+}
+
+// Stop-to-stop trips from awkward starts (random offset, heading and speed) around the real landmarks.
+const angles = realStops.map((s) => s.angle);
+const landmarks = LANDMARKS;
 let arrived = 0;
 for (let i = 0; i < 200; i++) {
   const from = parkingSpot(angles[i % 5]);

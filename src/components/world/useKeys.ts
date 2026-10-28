@@ -24,7 +24,7 @@ export function useKeys(active: boolean) {
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      if (!on.current || !DRIVE_KEYS.has(e.code) || isTyping(e.target)) return;
+      if (!on.current || !DRIVE_KEYS.has(e.code) || !isPlainKey(e)) return;
       held.current.add(e.code);
       e.preventDefault(); // arrow keys would otherwise scroll the page while you drive
     };
@@ -51,6 +51,9 @@ export function useKeys(active: boolean) {
   };
 }
 
-function isTyping(target: EventTarget | null) {
-  return target instanceof HTMLElement && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName));
+/** A key meant for the game: no Ctrl/Alt/Cmd shortcut (Alt+← is "back", Ctrl+S is "save") and not typing in a field. */
+export function isPlainKey(e: KeyboardEvent) {
+  const t = e.target;
+  const typing = t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
+  return !e.ctrlKey && !e.altKey && !e.metaKey && !typing;
 }

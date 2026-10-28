@@ -26,6 +26,27 @@ export function shoreLimit(x: number, z: number) {
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
+/**
+ * A tapped point moved to somewhere the jeepney's centre can actually be: out of any landmark,
+ * then in from the water. Without this a tap beside a big landmark is a target it can never reach.
+ */
+export function reachable(p: Point, obstacles: Circle[] = []): Point {
+  let { x, z } = p;
+  for (const o of obstacles) {
+    const min = o.r + CAR_RADIUS;
+    let dx = x - o.x;
+    let dz = z - o.z;
+    let d = Math.hypot(dx, dz);
+    if (d >= min) continue;
+    if (d < 1e-6) [dx, dz, d] = [-o.x, -o.z, Math.hypot(o.x, o.z)]; // dead centre: push towards the island's middle
+    x = o.x + (dx / d) * min;
+    z = o.z + (dz / d) * min;
+  }
+  const r = Math.hypot(x, z);
+  const limit = shoreLimit(x, z);
+  return r > limit ? { x: (x * limit) / r, z: (z * limit) / r } : { x, z };
+}
+
 export function step(car: Car, input: Input, dt: number, obstacles: Circle[] = []): Car {
   const t = tuning;
   let speed = car.speed;

@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { stops } from "@/lib/stops";
 import { parkingSpot, type Point } from "@/lib/world";
 import { StopCard } from "./ui/StopCard";
+import { isPlainKey } from "./world/useKeys";
 
 // The 3D code only loads in the browser, after the HTML (name, skip link, project list) is already on screen.
 const World = dynamic(() => import("./world/World"), {
@@ -48,7 +49,7 @@ export function IslandExperience() {
   // E opens the stop you're parked at (the same action as clicking the prompt).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.code === "KeyE" && nearId && !openId && onScreen) setOpenId(nearId);
+      if (e.code === "KeyE" && isPlainKey(e) && nearId && !openId && onScreen) setOpenId(nearId);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

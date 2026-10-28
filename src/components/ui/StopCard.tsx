@@ -10,6 +10,7 @@ import type { Stop } from "@/lib/stops";
  */
 export function StopCard({ stop, onClose }: { stop: Stop | null; onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const pressedBackdrop = useRef(false);
 
   useEffect(() => {
     const d = dialog.current!;
@@ -22,9 +23,12 @@ export function StopCard({ stop, onClose }: { stop: Stop | null; onClose: () => 
       ref={dialog}
       aria-labelledby="stop-title"
       onClose={onClose}
-      // A click on the dim backdrop lands on the <dialog> itself, not on the card inside it.
-      onClick={(e) => e.target === e.currentTarget && dialog.current?.close()}
-      className="m-auto w-[min(34rem,calc(100vw-2rem))] overflow-hidden rounded-xl border-[3px] border-ink bg-white p-0 text-ink shadow-[0_6px_0_var(--color-ink)] backdrop:bg-ink/50"
+      // A click on the dim backdrop lands on the <dialog> itself, not on the card inside it. Both the press
+      // and the release must be on the backdrop: selecting text and letting go outside the card keeps it open.
+      onPointerDown={(e) => (pressedBackdrop.current = e.target === e.currentTarget)}
+      onClick={(e) => pressedBackdrop.current && e.target === e.currentTarget && dialog.current?.close()}
+      // Scrolls when the card is taller than the screen (phone in landscape, zoomed text), so the links stay reachable.
+      className="m-auto max-h-[calc(100dvh-2rem)] w-[min(34rem,calc(100vw-2rem))] overflow-y-auto overscroll-contain rounded-xl border-[3px] border-ink bg-white p-0 text-ink shadow-[0_6px_0_var(--color-ink)] backdrop:bg-ink/50"
     >
       {stop && (
         <div>

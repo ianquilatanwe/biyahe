@@ -1,0 +1,24 @@
+/**
+ * Every number that shapes how driving and the camera feel, in one object.
+ * In development the Leva panel (TuningPanel.tsx) edits it live while you drive;
+ * the live site just uses these values. When a value feels right, copy it back here.
+ */
+export const tuning = {
+  // driving
+  accel: 14, // units/s² when speeding up
+  brake: 24, // units/s² when pressing against the current direction
+  maxForward: 12,
+  maxReverse: 5,
+  drag: 2.2, // how fast it coasts to a stop with no throttle
+  turn: 2.3, // radians/s at full lock and speed
+  // body
+  lean: 0.01, // how far the body leans out of turns
+  bounce: 0.012, // suspension jiggle at speed
+  // camera
+  cameraHeight: 12,
+  cameraDistance: 20,
+  lookAhead: 0.3, // seconds of travel the camera looks ahead
+  cameraFollow: 4, // higher = the camera catches up faster
+};
+
+export type Tuning = typeof tuning;

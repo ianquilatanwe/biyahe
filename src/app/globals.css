@@ -42,6 +42,16 @@ body {
   @apply inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full bg-red px-5 font-semibold text-white shadow-md transition hover:brightness-110 active:scale-[0.97];
 }
 
+/* On-island controls look like a jeepney's painted route signboard: yellow plate, ink rim,
+   a hard drop shadow that the button presses down into. */
+@utility sign {
+  @apply inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-lg border-2 border-ink bg-yellow px-4 font-display font-semibold whitespace-nowrap text-ink shadow-[0_3px_0_var(--color-ink)] transition-transform hover:-translate-y-px active:translate-y-[3px] active:shadow-none;
+}
+
+@utility sign-quiet {
+  @apply inline-flex cursor-pointer items-center justify-center rounded-lg font-semibold text-white hover:bg-white/15;
+}
+
 @utility panel {
   @apply rounded-2xl bg-white/90 shadow-md backdrop-blur;
 }

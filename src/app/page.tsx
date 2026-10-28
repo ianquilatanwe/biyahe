@@ -1,4 +1,4 @@
-import { WorldLoader } from "@/components/world/WorldLoader";
+import { IslandExperience } from "@/components/IslandExperience";
 import { stops } from "@/lib/stops";
 
 export default function Home() {
@@ -6,21 +6,18 @@ export default function Home() {
     <main>
       {/* The island fills the first screen. Everything on it is also in the list below. */}
       <section aria-labelledby="title" className="relative h-svh overflow-hidden bg-sky">
-        <WorldLoader />
+        <IslandExperience />
         <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-4 sm:p-6">
-          <div className="panel pointer-events-auto px-4 py-3">
+          <div className="panel pointer-events-auto px-3 py-2 sm:px-4 sm:py-3">
             <h1 id="title" className="font-display text-2xl font-semibold leading-none sm:text-3xl">
               Biyahe
             </h1>
             <p className="mt-1 text-sm text-muted">A portfolio by Ian Quilatan, frontend developer</p>
           </div>
-          <a href="#projects" className="btn-primary pointer-events-auto">
+          <a href="#projects" className="btn-primary pointer-events-auto shrink-0 whitespace-nowrap text-sm sm:text-base">
             Skip the island
           </a>
         </div>
-        <p className="panel absolute bottom-4 left-1/2 hidden -translate-x-1/2 px-4 py-2 text-sm md:block">
-          Drive with <kbd className="font-semibold">W A S D</kbd> or the arrow keys
-        </p>
       </section>
 
       <section id="projects" aria-labelledby="projects-title" className="mx-auto max-w-5xl px-5 py-16 sm:px-8">

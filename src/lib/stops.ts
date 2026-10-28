@@ -7,6 +7,8 @@ export type Stop = {
   blurb: string;
   stack: string;
   links: { label: string; href: string }[];
+  /** Screenshot in public/shots, 1200 × 750. */
+  shot?: string;
   /** Where it sits on the island: angle in degrees around the centre (0 = towards the camera). */
   angle: number;
 };
@@ -17,13 +19,14 @@ export const stops: Stop[] = [
     name: "FashionHub",
     landmark: "Sari-sari store",
     title: "FashionHub product listing",
-    blurb: "A product listing page built from a Figma design, with filters, sorting and a cart drawer.",
+    blurb: "A Figma product listing page built in Next.js on a live product API: search, filters, sorting, a working cart and offline support.",
     stack: "Next.js · TypeScript · Tailwind CSS",
     links: [
       { label: "Live site", href: "https://product-listing-demo-ten.vercel.app/" },
       { label: "Code", href: "https://github.com/ianquilatanwe/product-listing-demo" },
     ],
     angle: 150,
+    shot: "/shots/fashionhub.jpg",
   },
   {
     id: "sprig",
@@ -37,6 +40,7 @@ export const stops: Stop[] = [
       { label: "Code", href: "https://github.com/ianquilatanwe/landing-demo" },
     ],
     angle: 80,
+    shot: "/shots/sprig.jpg",
   },
   {
     id: "lumenfold",
@@ -47,16 +51,21 @@ export const stops: Stop[] = [
     stack: "Next.js · Motion · Tailwind CSS",
     links: [],
     angle: 10,
+    shot: "/shots/lumenfold.jpg",
   },
   {
     id: "recipes",
     name: "Recipe Finder",
     landmark: "Carinderia",
     title: "Recipe Finder app",
-    blurb: "A Flutter app that searches a recipe API, with loading, empty and error states and saved favourites.",
+    blurb: "A Figma recipe-app design built in Flutter for Android and the web, on a live recipe API. Save recipes and build a shopping list, even offline.",
     stack: "Flutter · Dart · REST API",
-    links: [{ label: "Code", href: "https://github.com/ianquilatanwe/recipe-finder-flutter" }],
+    links: [
+      { label: "Live web app", href: "https://recipe-finder-flutter.pages.dev/" },
+      { label: "Code", href: "https://github.com/ianquilatanwe/recipe-finder-flutter" },
+    ],
     angle: -70,
+    shot: "/shots/recipes.jpg",
   },
   {
     id: "about",

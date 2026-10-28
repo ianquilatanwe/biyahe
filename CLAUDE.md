@@ -14,6 +14,13 @@ everything is built from code primitives. Distilled from the `threejs-react-thre
   The drawing and the logic both import them, so what you see is where things collide.
 - **Content in `src/lib/stops.ts`.** The 3D stops and the HTML project list read the same data.
 
+- **Feel numbers live in `src/lib/tuning.ts`.** In `npm run dev` a Leva panel edits them live (dev-only:
+  `IslandExperience` loads `TuningPanel` behind `NODE_ENV === "development"`, so leva never ships).
+  New feel constants go there, with a range in `TuningPanel.tsx`.
+- **The frame loop owns the game, React owns the HUD.** Shared state crosses once per change:
+  the destination is a ref the loop reads; the loop calls `onNear`/`onArrive` only when they change.
+- Run `next start` for browser tests, and never with `next dev` running in the same folder: both use `.next`.
+
 ## The frame loop
 - Per-frame changes go through refs inside `useFrame`; never `setState` in the loop.
 - Move by `delta` (clamped, see `Driver`); smooth with `1 - Math.exp(-rate * dt)` or `MathUtils.damp`,

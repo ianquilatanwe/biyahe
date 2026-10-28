@@ -50,7 +50,7 @@ export const stops: Stop[] = [
     blurb: "A scroll-driven launch page for a made-up desk lamp: a pinned dusk-to-night scene and a shared-element finish picker.",
     stack: "Next.js · Motion · Tailwind CSS",
     links: [],
-    angle: 10,
+    angle: -140, // far side: a tall lighthouse on the camera side would hide the jeepney parked at it
     shot: "/shots/lumenfold.jpg",
   },
   {
@@ -75,6 +75,6 @@ export const stops: Stop[] = [
     blurb: "Frontend developer in the Philippines (UTC+8). Figma to UI, bug fixes, API wiring and responsive layouts, in React, Next.js and Flutter.",
     stack: "React · Next.js · TypeScript · Tailwind CSS · Flutter",
     links: [{ label: "GitHub", href: "https://github.com/ianquilatanwe" }],
-    angle: -140,
+    angle: 10,
   },
 ];

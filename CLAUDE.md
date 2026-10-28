@@ -20,7 +20,7 @@ everything is built from code primitives. Distilled from the `threejs-react-thre
 - **The frame loop owns the game, React owns the HUD.** Shared state crosses once per change:
   the destination is a ref the loop reads; the loop calls `onNear`/`onArrive` only when they change.
 - Browser tests run a production build in its own folder, so `next dev` (on `.next`) can stay open:
-  `NEXT_DIST_DIR=.next-test npm run build`, then `NEXT_DIST_DIR=.next-test npx next start -p 3300`.
+  `npm run build:test`, then the `biyahe-test` launch config (`npm run start:test`, port 3310).
   A plain `npm run build` while `next dev` runs overwrites dev's files and breaks it.
 
 ## The frame loop

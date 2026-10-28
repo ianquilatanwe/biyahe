@@ -32,19 +32,23 @@ const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(mi
  */
 export function reachable(p: Point, obstacles: Circle[] = []): Point {
   let { x, z } = p;
+  const r = Math.hypot(x, z);
+  const limit = shoreLimit(x, z);
+  if (r > limit) [x, z] = [(x * limit) / r, (z * limit) / r];
   for (const o of obstacles) {
     const min = o.r + CAR_RADIUS;
     let dx = x - o.x;
     let dz = z - o.z;
     let d = Math.hypot(dx, dz);
     if (d >= min) continue;
-    if (d < 1e-6) [dx, dz, d] = [-o.x, -o.z, Math.hypot(o.x, o.z)]; // dead centre: push towards the island's middle
+    // Out the near side; if that's in the water (a landmark by the shore), out the island side instead.
+    const outX = o.x + (dx / d) * min;
+    const outZ = o.z + (dz / d) * min;
+    if (d < 1e-6 || Math.hypot(outX, outZ) > shoreLimit(outX, outZ)) [dx, dz, d] = [-o.x, -o.z, Math.hypot(o.x, o.z)];
     x = o.x + (dx / d) * min;
     z = o.z + (dz / d) * min;
   }
-  const r = Math.hypot(x, z);
-  const limit = shoreLimit(x, z);
-  return r > limit ? { x: (x * limit) / r, z: (z * limit) / r } : { x, z };
+  return { x, z };
 }
 
 export function step(car: Car, input: Input, dt: number, obstacles: Circle[] = []): Car {

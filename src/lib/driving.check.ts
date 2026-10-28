@@ -89,4 +89,4 @@ for (let i = 0; i < 200; i++) {
 assert.ok(arrived >= 196, `autopilot arrives on at least 98% of awkward trips (got ${arrived}/200)`);
 assert.ok(Math.hypot(stopPosition(0).x, stopPosition(0).z - 19) < 1e-9, "angle 0 points at the camera");
 
-console.log("driving: all checks pass");
+console.log(`driving: all checks pass (autopilot sweep ${arrived}/200)`);

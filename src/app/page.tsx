@@ -6,8 +6,8 @@ export default function Home() {
     <main>
       {/* The island fills the first screen. Everything on it is also in the list below. */}
       <section aria-labelledby="title" className="relative h-svh overflow-hidden bg-sky">
-        <IslandExperience />
-        <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-4 sm:p-6">
+        {/* The header comes first in the source so "Skip the island" is the first Tab stop; z-10 keeps it above the canvas. */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-3 p-4 sm:p-6">
           <div className="panel pointer-events-auto px-3 py-2 sm:px-4 sm:py-3">
             <h1 id="title" className="font-display text-2xl font-semibold leading-none sm:text-3xl">
               Biyahe
@@ -18,6 +18,7 @@ export default function Home() {
             Skip the island
           </a>
         </div>
+        <IslandExperience />
       </section>
 
       <section id="projects" aria-labelledby="projects-title" className="mx-auto max-w-5xl px-5 py-16 sm:px-8">

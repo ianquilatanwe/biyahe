@@ -10,6 +10,17 @@
   --color-yellow: #ffc93c;
   --color-muted: #4a5468; /* secondary text (7:1 on sand) */
   --color-edge: #e4d6b8;
+
+  /* The loading screen's jeepney drives across its little road. */
+  --animate-drive: drive 2.4s linear infinite;
+  @keyframes drive {
+    from {
+      transform: translateX(-3rem);
+    }
+    to {
+      transform: translateX(14rem);
+    }
+  }
 }
 
 @theme inline {

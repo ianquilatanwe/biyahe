@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, type RefObject } from "react";
+import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { MathUtils, Vector3 } from "three";
 import { autopilot, NO_INPUT, step, type Car } from "@/lib/driving";
@@ -8,8 +8,10 @@ import { stops } from "@/lib/stops";
 import { tuning } from "@/lib/tuning";
 import { LANDMARKS, nearestStop } from "@/lib/world";
 import type { Destination } from "../IslandExperience";
+import { NoIsland } from "../ui/NoIsland";
 import { Island } from "./Island";
 import { Jeepney, type JeepneyParts } from "./Jeepney";
+import { Landmarks } from "./Landmarks";
 import { useCalm } from "./useCalm";
 import { useKeys } from "./useKeys";
 
@@ -38,6 +40,7 @@ function Driver({ driving, destination, onNear, onArrive }: DriverProps) {
   const offset = useMemo(() => new Vector3(), []);
   const lean = useRef(0);
   const near = useRef<string | null>(null);
+  const route = useRef<string | null>(null);
   const tripTime = useRef(0);
   const lastTrip = useRef<Destination | null>(null);
 
@@ -79,6 +82,12 @@ function Driver({ driving, destination, onNear, onArrive }: DriverProps) {
 
     const p = parts.current;
     if (!p) return;
+    // The route sign on the roof names the closest stop, wherever the jeepney is (repaints only on change).
+    const closest = nearestStop(c.x, c.z, stops, Infinity)!;
+    if (closest.id !== route.current) {
+      route.current = closest.id;
+      p.showRoute(closest.name);
+    }
     p.root.position.set(c.x, 0, c.z);
     p.root.rotation.y = c.yaw;
     for (const w of p.wheels) w.rotation.x += (c.speed * dt) / 0.42;
@@ -100,15 +109,18 @@ function Driver({ driving, destination, onNear, onArrive }: DriverProps) {
   return <Jeepney ref={parts} />;
 }
 
-function NoWebGL() {
-  return (
-    <div className="grid h-full place-items-center p-6 text-center">
-      <p className="max-w-sm rounded-2xl bg-white/90 p-5 text-ink">
-        {/* Plain text, no link: this sits inside an aria-hidden wrapper, and the skip link already goes to the list. */}
-        This browser can’t show the 3D island. Every project is in the list below.
-      </p>
-    </div>
-  );
+/** Tells the page once the island is really on screen: two frames in, the shaders are compiled and drawn. */
+function FirstFrames({ onReady }: { onReady: () => void }) {
+  const frames = useRef(0);
+  useFrame(() => {
+    if (++frames.current === 2) onReady();
+  });
+  return null;
+}
+
+function NoWebGL({ onReady }: { onReady: () => void }) {
+  useEffect(onReady, [onReady]); // nothing to wait for: lift the loading screen so this message shows
+  return <NoIsland />;
 }
 
 type WorldProps = DriverProps & {
@@ -116,9 +128,11 @@ type WorldProps = DriverProps & {
   active: boolean;
   onGoTo: (d: Destination) => void;
   onGoToStop: (id: string) => void;
+  /** Called once, when the island has drawn its first frames (or WebGL turned out to be missing). */
+  onReady: () => void;
 };
 
-export default function World({ active, onGoTo, onGoToStop, ...driver }: WorldProps) {
+export default function World({ active, onGoTo, onGoToStop, onReady, ...driver }: WorldProps) {
   return (
     <Canvas
       flat // no filmic tone mapping: the flat colours show exactly as their hex values
@@ -126,14 +140,17 @@ export default function World({ active, onGoTo, onGoToStop, ...driver }: WorldPr
       dpr={[1, 1.75]} // cap sharpness on high-density phones: the biggest single saving on mobile
       camera={{ fov: 40, near: 0.5, far: 300, position: [START.x, tuning.cameraHeight, START.z + tuning.cameraDistance] }}
       gl={{ antialias: true, powerPreference: "high-performance" }}
-      fallback={<NoWebGL />}
+      fallback={<NoWebGL onReady={onReady} />}
     >
       <color attach="background" args={[SKY]} />
       <fog attach="fog" args={[SKY, 55, 140]} />
-      <hemisphereLight args={["#fff1d6", "#5f8f5a", 1.4]} />
-      <directionalLight position={[-20, 30, 12]} intensity={2.2} color="#ffd9a6" />
-      <Island onGround={onGoTo} onStop={onGoToStop} />
+      {/* Near-white light with only a hint of warmth: tinted light multiplied into every colour and turned the sand orange. */}
+      <hemisphereLight args={["#fffaf0", "#6f9a62", 1.35]} />
+      <directionalLight position={[-20, 30, 12]} intensity={2.0} color="#fff3e2" />
+      <Island onGround={onGoTo} />
+      <Landmarks onStop={onGoToStop} />
       <Driver {...driver} />
+      <FirstFrames onReady={onReady} />
     </Canvas>
   );
 }

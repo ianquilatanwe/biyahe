@@ -4,14 +4,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { stops } from "@/lib/stops";
 import { parkingSpot, type Point } from "@/lib/world";
+import { Loading } from "./ui/Loading";
+import { IslandBoundary } from "./ui/NoIsland";
 import { StopCard } from "./ui/StopCard";
 import { isPlainKey } from "./world/useKeys";
 
 // The 3D code only loads in the browser, after the HTML (name, skip link, project list) is already on screen.
-const World = dynamic(() => import("./world/World"), {
-  ssr: false,
-  loading: () => <p className="grid h-full place-items-center font-display text-xl font-semibold text-ink">Loading the island…</p>,
-});
+// <Loading> covers the island until it has drawn its first frame.
+const World = dynamic(() => import("./world/World"), { ssr: false });
 
 // Dev-only tuning sliders. In a production build this condition is false at build time,
 // so the panel and the leva package are left out of the site entirely.
@@ -30,6 +30,8 @@ export function IslandExperience() {
   const [onScreen, setOnScreen] = useState(true);
   const [nearId, setNearId] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+  const onReady = useCallback(() => setReady(true), []);
 
   // Render only while at least a quarter of the island is on screen (saves battery while reading the list).
   useEffect(() => {
@@ -61,15 +63,19 @@ export function IslandExperience() {
   return (
     <>
       <div ref={box} aria-hidden="true" className="absolute inset-0">
-        <World
-          active={onScreen}
-          driving={onScreen && !openId}
-          destination={destination}
-          onGoTo={goTo}
-          onGoToStop={goToStop}
-          onNear={setNearId}
-          onArrive={setOpenId}
-        />
+        <IslandBoundary onFail={onReady}>
+          <World
+            active={onScreen}
+            driving={onScreen && !openId}
+            destination={destination}
+            onGoTo={goTo}
+            onGoToStop={goToStop}
+            onNear={setNearId}
+            onArrive={setOpenId}
+            onReady={onReady}
+          />
+        </IslandBoundary>
+        <Loading done={ready} />
       </div>
 
       {/* On-screen controls. The wrapper lets taps through to the island; only the controls catch them. */}

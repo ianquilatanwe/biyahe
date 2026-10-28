@@ -10,7 +10,6 @@ export type Circle = Point & { r: number };
 export const ISLAND_RADIUS = 27; // sand edge before the wobble
 export const GRASS_RADIUS = 21.5;
 export const STOP_RADIUS = 19; // landmarks sit on this ring
-export const LANDMARK_RADIUS = 1.2; // what the jeepney bumps into at each stop
 export const OPEN_RADIUS = 7; // how close to a landmark the "Open" prompt appears
 
 /** Same "random" every load, so the coastline never changes shape between visits. */
@@ -29,18 +28,34 @@ export function stopPosition(angleDegrees: number, radius = STOP_RADIUS): Point 
   return { x: Math.sin(a) * radius, z: Math.cos(a) * radius };
 }
 
+/**
+ * Each landmark's footprint as a circle the jeepney bumps into: `out` is how far its centre sits past the
+ * stop ring towards the sea, `r` its radius. Keep in step with the models in Landmarks.tsx.
+ * Rule of thumb: out + 4.5 (parking distance) - r must stay above 1.3 (the jeepney) + 2.5 (arrive radius).
+ */
+export const FOOTPRINTS: Record<string, { out: number; r: number }> = {
+  fashionhub: { out: 1.6, r: 2.4 }, // store, awning and clothes rack
+  sprig: { out: 1.6, r: 2.5 }, // shade house and benches of pots
+  lumenfold: { out: 1.4, r: 1.9 }, // lighthouse on its rock base
+  recipes: { out: 1.6, r: 2.4 }, // eatery roof, counter and stools
+  about: { out: 0.6, r: 1.5 }, // the pier's gate posts; the pier itself runs out over the water
+};
+
 /** What the jeepney bumps into: one circle per stop's landmark. Driving, tap targets and the check all use this. */
-export const LANDMARKS: Circle[] = stops.map((s) => ({ ...stopPosition(s.angle), r: LANDMARK_RADIUS }));
+export const LANDMARKS: Circle[] = stops.map((s) => {
+  const { out, r } = FOOTPRINTS[s.id];
+  return { ...stopPosition(s.angle, STOP_RADIUS + out), r };
+});
 
 /** Where the jeepney parks for a stop: on the island side of the landmark, facing it. */
 export function parkingSpot(angleDegrees: number): Point {
   return stopPosition(angleDegrees, STOP_RADIUS - 4.5);
 }
 
-/** The stop whose landmark is within OPEN_RADIUS of (x, z), nearest first, or null. */
-export function nearestStop<T extends { angle: number }>(x: number, z: number, list: readonly T[]): T | null {
+/** The stop whose landmark is within `within` of (x, z), nearest first, or null. */
+export function nearestStop<T extends { angle: number }>(x: number, z: number, list: readonly T[], within = OPEN_RADIUS): T | null {
   let best: T | null = null;
-  let bestD = OPEN_RADIUS;
+  let bestD = within;
   for (const s of list) {
     const p = stopPosition(s.angle);
     const d = Math.hypot(p.x - x, p.z - z);

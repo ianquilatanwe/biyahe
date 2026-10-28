@@ -1,6 +1,6 @@
 // Quick self-check for the driving rules. Run: node src/lib/driving.check.ts
 import assert from "node:assert/strict";
-import { ISLAND_LIMIT, step, type Car, type Input } from "./driving.ts";
+import { shoreLimit, step, type Car, type Input } from "./driving.ts";
 
 const run = (car: Car, input: Input, seconds: number) => {
   for (let t = 0; t < seconds; t += 1 / 60) car = step(car, input, 1 / 60);
@@ -22,7 +22,10 @@ assert.equal(step(start, { throttle: 0, steer: 1 }, 1 / 60).yaw, start.yaw);
 
 // Coasting slows it down; it never leaves the island.
 assert.ok(run(ahead, { throttle: 0, steer: 0 }, 2).speed < ahead.speed / 5, "coasts to a stop");
-const far = run(start, { throttle: 1, steer: 0 }, 20);
-assert.ok(Math.hypot(far.x, far.z) <= ISLAND_LIMIT + 1e-9, "stays on the island");
+// It never leaves the island, in any direction, including where the coast dips in.
+for (let deg = 0; deg < 360; deg += 15) {
+  const far = run({ ...start, yaw: (deg * Math.PI) / 180 }, { throttle: 1, steer: 0 }, 12);
+  assert.ok(Math.hypot(far.x, far.z) <= shoreLimit(far.x, far.z) + 1e-9, `stays on the island heading ${deg}°`);
+}
 
 console.log("driving: all checks pass");

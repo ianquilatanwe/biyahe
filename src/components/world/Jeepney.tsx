@@ -1,7 +1,8 @@
 "use client";
 
-import { forwardRef, useRef, useImperativeHandle } from "react";
+import { useImperativeHandle, useRef, type Ref } from "react";
 import type { Group } from "three";
+import { paint } from "./paint";
 
 /** Handles the driving loop moves each frame: the whole jeepney, its sprung body and the wheels. */
 export type JeepneyParts = { root: Group; body: Group; wheels: Group[] };
@@ -16,9 +17,8 @@ const TYRE = "#1f1f24";
 /** One box with flat-shaded paint, the building block of the whole model. */
 function Box({ size, at, color }: { size: [number, number, number]; at: [number, number, number]; color: string }) {
   return (
-    <mesh position={at}>
+    <mesh position={at} material={paint(color)}>
       <boxGeometry args={size} />
-      <meshLambertMaterial color={color} flatShading />
     </mesh>
   );
 }
@@ -27,11 +27,11 @@ function Box({ size, at, color }: { size: [number, number, number]; at: [number,
  * A jeepney built from boxes and cylinders: no model file. It faces +z, sits on the
  * ground at y = 0, and is about 4.6 long and 2.3 tall.
  */
-export const Jeepney = forwardRef<JeepneyParts>(function Jeepney(_, ref) {
+export function Jeepney({ ref }: { ref?: Ref<JeepneyParts> }) {
   const root = useRef<Group>(null!);
   const body = useRef<Group>(null!);
   const wheels = useRef<Group[]>([]);
-  useImperativeHandle(ref, () => ({ root: root.current, body: body.current, wheels: wheels.current }));
+  useImperativeHandle(ref, () => ({ root: root.current, body: body.current, wheels: wheels.current }), []);
 
   return (
     <group ref={root}>
@@ -54,14 +54,14 @@ export const Jeepney = forwardRef<JeepneyParts>(function Jeepney(_, ref) {
             if (g) wheels.current[i] = g;
           }}
         >
-          <mesh rotation-z={Math.PI / 2}>
+          <mesh rotation-z={Math.PI / 2} material={paint(TYRE)}>
             <cylinderGeometry args={[0.42, 0.42, 0.32, 12]} />
-            <meshLambertMaterial color={TYRE} flatShading />
           </mesh>
-          <mesh rotation-z={Math.PI / 2} position-x={x > 0 ? 0.17 : -0.17}>
+          {/* hub with a bar across it, so you can see the wheels turn */}
+          <mesh rotation-z={Math.PI / 2} position-x={x > 0 ? 0.17 : -0.17} material={paint(CHROME)}>
             <cylinderGeometry args={[0.2, 0.2, 0.02, 8]} />
-            <meshLambertMaterial color={CHROME} />
           </mesh>
+          <Box size={[0.04, 0.5, 0.1]} at={[x > 0 ? 0.18 : -0.18, 0, 0]} color={TYRE} />
         </group>
       ))}
 
@@ -98,4 +98,4 @@ export const Jeepney = forwardRef<JeepneyParts>(function Jeepney(_, ref) {
       </group>
     </group>
   );
-});
+}

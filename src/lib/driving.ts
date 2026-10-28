@@ -4,13 +4,20 @@
  *
  * The world is flat: x/z is the ground, yaw 0 faces +z, and a larger yaw turns left.
  */
+import { coastRadius } from "./world.ts";
+
 export type Car = { x: number; z: number; yaw: number; speed: number; yawRate: number };
 
 /** throttle and steer run from -1 to 1. steer > 0 turns left. */
 export type Input = { throttle: number; steer: number };
 
-/** The jeepney's centre never goes further than this from the island centre. */
-export const ISLAND_LIMIT = 24.5;
+/** How far inside the water's edge the jeepney's centre must stay: half its length plus a little sand. */
+const SHORE_MARGIN = 2.6;
+
+/** The furthest the jeepney's centre may go from the island centre in this direction. */
+export function shoreLimit(x: number, z: number) {
+  return coastRadius(Math.atan2(z, x)) - SHORE_MARGIN;
+}
 
 const ACCEL = 14; // units/s² when speeding up
 const BRAKE = 24; // units/s² when pressing against the current direction
@@ -40,9 +47,10 @@ export function step(car: Car, input: Input, dt: number): Car {
 
   // Soft bump at the shoreline: pull back onto the island and lose some speed.
   const r = Math.hypot(x, z);
-  if (r > ISLAND_LIMIT) {
-    x *= ISLAND_LIMIT / r;
-    z *= ISLAND_LIMIT / r;
+  const limit = shoreLimit(x, z);
+  if (r > limit) {
+    x *= limit / r;
+    z *= limit / r;
     speed *= 0.6;
   }
 

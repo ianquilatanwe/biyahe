@@ -9,16 +9,24 @@ const LEFT = ["KeyA", "ArrowLeft"];
 const RIGHT = ["KeyD", "ArrowRight"];
 const DRIVE_KEYS = new Set([...FORWARD, ...BACK, ...LEFT, ...RIGHT]);
 
-/** Tracks which driving keys are held. Read `read()` every frame; nothing re-renders. */
-export function useKeys() {
+/**
+ * Tracks which driving keys are held. Read `read()` every frame; nothing re-renders.
+ * While `active` is false (island scrolled away) the keys are left alone, so arrows scroll the page.
+ */
+export function useKeys(active: boolean) {
   const held = useRef(new Set<string>());
+  const on = useRef(active);
+
+  useEffect(() => {
+    on.current = active;
+    if (!active) held.current.clear();
+  }, [active]);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      if (!DRIVE_KEYS.has(e.code) || isTyping(e.target)) return;
+      if (!on.current || !DRIVE_KEYS.has(e.code) || isTyping(e.target)) return;
       held.current.add(e.code);
-      // Arrow keys would scroll the page while the island fills the screen.
-      if (window.scrollY < window.innerHeight / 2) e.preventDefault();
+      e.preventDefault(); // arrow keys would otherwise scroll the page while you drive
     };
     const up = (e: KeyboardEvent) => held.current.delete(e.code);
     const clear = () => held.current.clear(); // no stuck keys after switching tabs

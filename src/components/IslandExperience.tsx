@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { stops } from "@/lib/stops";
 import { parkingSpot, type Point } from "@/lib/world";
 import { Loading } from "./ui/Loading";
+import { Road } from "./ui/RoadPaint";
 import { IslandBoundary } from "./ui/NoIsland";
 import { StopCard } from "./ui/StopCard";
 import { isPlainKey } from "./world/useKeys";
@@ -35,6 +36,8 @@ export function IslandExperience() {
   const onFail = useCallback(() => setIsland("failed"), []);
   // Read out by screen readers while the autopilot drives (the card takes focus when it opens).
   const [status, setStatus] = useState("");
+  // The driving hint goes once you've driven: by then it has done its job.
+  const [moved, setMoved] = useState(false);
 
   // Render only while at least a quarter of the island is on screen (saves battery while reading the list).
   useEffect(() => {
@@ -45,6 +48,7 @@ export function IslandExperience() {
 
   const goTo = useCallback((d: Destination) => {
     destination.current = d;
+    setMoved(true);
   }, []);
   const goToStop = useCallback((id: string) => {
     const stop = stops.find((s) => s.id === id)!;
@@ -59,7 +63,9 @@ export function IslandExperience() {
   // E opens the stop you're parked at (the same action as clicking the prompt).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.code === "KeyE" && isPlainKey(e) && nearId && !openId && onScreen) openStop(nearId);
+      if (!isPlainKey(e) || !onScreen) return;
+      if (e.code === "KeyE" && nearId && !openId) openStop(nearId);
+      if (/^(Key[WASD]|Arrow)/.test(e.code)) setMoved(true);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -80,6 +86,8 @@ export function IslandExperience() {
             onGoToStop={goToStop}
             onNear={setNearId}
             onArrive={openStop}
+            nearId={nearId}
+            onOpen={openStop}
             onReady={onReady}
           />
         </IslandBoundary>
@@ -89,22 +97,36 @@ export function IslandExperience() {
       {/* On-screen controls. The wrapper lets taps through to the island; only the controls catch them.
           Hidden when the island can't run: the buttons would drive a jeepney that isn't there. */}
       {island !== "failed" && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col items-center gap-3 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-3 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          {/* Mouse and touch open a stop from its sign on the island. This button is the same action for the
+              keyboard and screen readers: out of sight until it has focus. */}
           {near && (
-            <button type="button" onClick={() => openStop(near.id)} aria-keyshortcuts="E" className="sign pointer-events-auto min-h-12 px-6 text-lg">
+            <button
+              type="button"
+              onClick={() => openStop(near.id)}
+              aria-keyshortcuts="E"
+              className="sign-red sr-only pointer-events-auto px-6 text-lg focus:not-sr-only"
+            >
               Open {near.name}
-              <kbd aria-hidden="true" className="ml-1 hidden rounded border-2 border-ink px-1.5 text-sm leading-tight md:inline">E</kbd>
             </button>
           )}
-          <p className="panel pointer-events-auto px-3 py-1.5 text-sm">
-            <span className="hidden md:inline">Drive with W A S D or the arrows, or click the ground</span>
-            <span className="md:hidden">Tap the island to drive there</span>
+          <p
+            className={`plate bg-paper px-3 py-1 text-sm font-medium transition-opacity duration-500 motion-reduce:transition-none ${moved ? "opacity-0" : ""}`}
+          >
+            <span className="hidden md:inline">
+              Drive with <Key>W</Key> <Key>A</Key> <Key>S</Key> <Key>D</Key> or the arrows, <Key>Space</Key> to brake, or click the ground
+            </span>
+            <span className="md:hidden">Tap the ground to drive there</span>
           </p>
-          <nav aria-label="Stops" className="pointer-events-auto w-full max-w-4xl">
-            <ul className="flex snap-x gap-2 overflow-x-auto px-1 pt-1 pb-2 sm:justify-center">
+          <nav aria-label="Stops" className="pointer-events-auto relative w-full max-w-3xl">
+            {/* The stops sit along a short stretch of road (between the two rows on a phone). */}
+            <div aria-hidden="true" className="absolute inset-x-6 top-1/2 h-4 -translate-y-1/2 rounded-full bg-ink">
+              <Road className="h-full w-full" />
+            </div>
+            <ul className="relative flex flex-wrap justify-center gap-2">
               {stops.map((s) => (
-                <li key={s.id} className="snap-start">
-                  <button type="button" onClick={() => goToStop(s.id)} className="sign">
+                <li key={s.id}>
+                  <button type="button" onClick={() => goToStop(s.id)} className="sign min-h-11 px-3 text-[15px] sm:px-4">
                     <span className="sr-only">Drive to </span>
                     {s.name}
                   </button>
@@ -122,4 +144,9 @@ export function IslandExperience() {
       <TuningPanel />
     </>
   );
+}
+
+/** A keyboard key in the driving hint. */
+function Key({ children }: { children: React.ReactNode }) {
+  return <kbd className="rounded border-2 border-ink bg-yellow px-1 font-display text-xs">{children}</kbd>;
 }

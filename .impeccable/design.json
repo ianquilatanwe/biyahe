@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-28T00:00:00+08:00",
+  "title": "Design System: Biyahe",
+  "extensions": {
+    "colorMeta": {
+      "yellow": { "role": "primary", "displayName": "Route-Board Yellow", "canonical": "#ffc93c", "tonalRamp": ["#4d3700", "#8a6400", "#c79000", "#ffba05", "#ffcb42", "#ffdc80", "#ffeab3", "#fff8e5"] },
+      "red": { "role": "primary", "displayName": "Jeepney Red", "canonical": "#c41e30", "tonalRamp": ["#420a10", "#77121d", "#ac1a2a", "#de263a", "#e65b6a", "#ee909b", "#f5bdc3", "#fce9eb"] },
+      "red-deep": { "role": "primary", "displayName": "Sign-Writer Red", "canonical": "#9e1426", "tonalRamp": ["#440910", "#7a0f1d", "#b1162a", "#e3213a", "#ea586b", "#f18e9b", "#f6bbc3", "#fce8eb"] },
+      "sea": { "role": "secondary", "displayName": "Pier Sea", "canonical": "#0f5560", "tonalRamp": ["#0a3b42", "#136977", "#1b98ac", "#27c4dd", "#5cd3e6", "#91e1ee", "#bdedf5", "#e9f9fc"] },
+      "roof-teal": { "role": "secondary", "displayName": "Roof Teal", "canonical": "#2a9d8f", "tonalRamp": ["#103c37", "#1d6d63", "#2a9d8f", "#3acab9", "#6ad7ca", "#9ae4db", "#c3efe9", "#ebfaf8"] },
+      "ink": { "role": "neutral", "displayName": "Asphalt Ink", "canonical": "#1d2433", "tonalRamp": ["#1c2231", "#323e58", "#485a7f", "#6076a4", "#8797bb", "#aeb9d1", "#ced5e3", "#eff1f6"] },
+      "sky": { "role": "neutral", "displayName": "Sunset Sky", "canonical": "#f6c9a1", "tonalRamp": ["#462407", "#7e420c", "#b65f11", "#e97c1b", "#ef9c53", "#f4bc8b", "#f8d7b9", "#fdf2e8"] },
+      "paper": { "role": "neutral", "displayName": "Ticket Paper", "canonical": "#fffaf2", "tonalRamp": ["#4d2f00", "#8a5500", "#c77a00", "#ff9f05", "#ffb642", "#ffce80", "#ffe2b3", "#fff5e5"] },
+      "muted": { "role": "neutral", "displayName": "Sunset Brown", "canonical": "#4b3a2e", "tonalRamp": ["#2f251d", "#554234", "#7b5f4c", "#a07d64", "#b79d8a", "#cfbdb0", "#e2d7d0", "#f5f2ef"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "The Pier's About heading, white on sea. 36px, 48px from 640px." },
+      "headline": { "displayName": "Headline", "purpose": "The Projects plate heading, red-deep on yellow. 30px, 36px from 640px." },
+      "title": { "displayName": "Title", "purpose": "Project titles on tickets. 24px, 30px from 640px, balanced." },
+      "body": { "displayName": "Body", "purpose": "Blurbs, max about 65ch, pretty-wrapped." },
+      "body-lead": { "displayName": "Lead", "purpose": "Section intros and the Pier blurb." },
+      "label": { "displayName": "Label", "purpose": "Every sign, plate, stop strip and key cap. Sentence case." }
+    },
+    "shadows": [
+      { "name": "sign-ledge", "value": "0 3px 0 var(--color-ink)", "purpose": "Signs, header route plate, route markers, loader plate. Pressing a sign removes it." },
+      { "name": "heading-ledge", "value": "0 4px 0 var(--color-ink)", "purpose": "The Projects plate heading." },
+      { "name": "ticket-ledge", "value": "0 6px 0 var(--color-ink)", "purpose": "Tickets, the stop dialog, the no-WebGL message." },
+      { "name": "focus-ring", "value": "outline: 3px solid var(--color-ink); outline-offset: 2px; box-shadow: 0 0 0 6px var(--color-yellow)", "purpose": "Global :focus-visible, visible on red, sky and the island." },
+      { "name": "dialog-backdrop", "value": "rgb(29 36 51 / 0.5)", "purpose": "Behind the stop dialog. No blur." }
+    ],
+    "motion": [
+      { "name": "press", "value": "transform 150ms cubic-bezier(0.4, 0, 0.2, 1); hover translateY(-1px); active translateY(3px) + ledge removed", "purpose": "Sign press." },
+      { "name": "bob", "value": "1.4s ease-in-out infinite, translateY(4px) at 50%", "purpose": "In-world stop signs." },
+      { "name": "drive", "value": "2.4s linear infinite, translateX(-3rem) to translateX(14rem)", "purpose": "The loader's jeepney." },
+      { "name": "fade", "value": "opacity 500ms", "purpose": "Loader and driving hint leaving." },
+      { "name": "tap-land-pulse", "value": "scale (1 + 0.9 * e^(-10t)) * (1 + 0.14 * sin(7t))", "purpose": "In-world tap chevrons. Still under reduced motion." },
+      { "name": "cursor", "value": "url(/cursors/arrow.svg) 3 2, auto; url(/cursors/arrow-go.svg) 3 2, pointer", "purpose": "Yellow plate arrow; red with white rim over a, button, [data-go]." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Yellow Sign",
+      "kind": "button",
+      "refersTo": "sign",
+      "description": "Default pressable plate for links and stop buttons.",
+      "html": "<a class=\"ds-sign\" href=\"#\">Live site <svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.25\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M8 16L16 8M9 8h7v7\"/></svg></a>",
+      "css": ".ds-sign { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 16px; border: 2px solid #1d2433; border-radius: 8px; background: #ffc93c; color: #1d2433; font-family: Fredoka, sans-serif; font-weight: 600; white-space: nowrap; text-decoration: none; box-shadow: 0 3px 0 #1d2433; transition: transform 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-sign:hover { transform: translateY(-1px); } .ds-sign:active { transform: translateY(3px); box-shadow: none; } .ds-sign:focus-visible { outline: 3px solid #1d2433; outline-offset: 2px; box-shadow: 0 0 0 6px #ffc93c; }"
+    },
+    {
+      "name": "Paper Sign",
+      "kind": "button",
+      "refersTo": "sign-paper",
+      "description": "The quiet sign: Project list, secondary contacts.",
+      "html": "<a class=\"ds-sign-paper\" href=\"#\">Project list <svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.25\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 5v14M6 13l6 6 6-6\"/></svg></a>",
+      "css": ".ds-sign-paper { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 16px; border: 2px solid #1d2433; border-radius: 8px; background: #fffaf2; color: #1d2433; font-family: Fredoka, sans-serif; font-weight: 600; white-space: nowrap; text-decoration: none; box-shadow: 0 3px 0 #1d2433; transition: transform 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-sign-paper:hover { transform: translateY(-1px); } .ds-sign-paper:active { transform: translateY(3px); box-shadow: none; } .ds-sign-paper:focus-visible { outline: 3px solid #1d2433; outline-offset: 2px; box-shadow: 0 0 0 6px #ffc93c; }"
+    },
+    {
+      "name": "Red Sign",
+      "kind": "button",
+      "refersTo": "sign-red",
+      "description": "The one action that matters most on a screen.",
+      "html": "<a class=\"ds-sign-red\" href=\"#\">Hire me on Upwork <svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.25\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M8 16L16 8M9 8h7v7\"/></svg></a>",
+      "css": ".ds-sign-red { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 16px; border: 2px solid #1d2433; border-radius: 8px; background: #c41e30; color: #fff; font-family: Fredoka, sans-serif; font-weight: 600; white-space: nowrap; text-decoration: none; box-shadow: 0 3px 0 #1d2433; transition: transform 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-sign-red:hover { transform: translateY(-1px); } .ds-sign-red:active { transform: translateY(3px); box-shadow: none; } .ds-sign-red:focus-visible { outline: 3px solid #1d2433; outline-offset: 2px; box-shadow: 0 0 0 6px #ffc93c; }"
+    },
+    {
+      "name": "Route Plate",
+      "kind": "custom",
+      "refersTo": "plate",
+      "description": "The header plate: a label that doesn't press. Title in red-deep, split from the name by an ink rule.",
+      "html": "<div class=\"ds-plate\"><strong class=\"ds-plate-title\">Biyahe</strong><span class=\"ds-plate-rule\"></span><span class=\"ds-plate-sub\">Ian Quilatan, frontend developer</span></div>",
+      "css": ".ds-plate { display: inline-flex; align-items: center; gap: 10px; min-height: 40px; padding: 4px 12px 4px 10px; border: 2px solid #1d2433; border-radius: 8px; background: #ffc93c; color: #1d2433; font-family: Fredoka, sans-serif; font-weight: 600; box-shadow: 0 3px 0 #1d2433; } .ds-plate-title { font-size: 20px; line-height: 1; color: #9e1426; font-weight: 600; } .ds-plate-rule { width: 2px; height: 20px; background: #1d2433; } .ds-plate-sub { font-size: 14px; font-weight: 500; }"
+    },
+    {
+      "name": "Ticket",
+      "kind": "card",
+      "refersTo": "ticket",
+      "description": "The project card, on the island and the route board: red stop strip, screenshot, text, signs.",
+      "html": "<article class=\"ds-ticket\"><div class=\"ds-ticket-strip\">Stop 1 · Sari-sari store</div><div class=\"ds-ticket-shot\"></div><div class=\"ds-ticket-body\"><h3 class=\"ds-ticket-title\">FashionHub product listing</h3><p class=\"ds-ticket-blurb\">A Figma product listing page built in Next.js on a live product API.</p><p class=\"ds-ticket-stack\">Next.js · TypeScript · Tailwind CSS</p></div></article>",
+      "css": ".ds-ticket { max-width: 34rem; overflow: hidden; border: 3px solid #1d2433; border-radius: 12px; background: #fffaf2; color: #1d2433; box-shadow: 0 6px 0 #1d2433; font-family: Rubik, sans-serif; } .ds-ticket-strip { display: flex; align-items: center; min-height: 44px; padding: 0 20px; background: #c41e30; color: #fff; font-family: Fredoka, sans-serif; font-weight: 600; font-size: 14px; letter-spacing: 0.025em; } .ds-ticket-shot { height: 140px; background: #f6c9a1; border-bottom: 3px solid #1d2433; } .ds-ticket-body { padding: 20px; } .ds-ticket-title { margin: 0; font-family: Fredoka, sans-serif; font-weight: 600; font-size: 24px; line-height: 1.25; } .ds-ticket-blurb { margin: 8px 0 0; } .ds-ticket-stack { margin: 12px 0 0; font-size: 14px; color: #4b3a2e; }"
+    },
+    {
+      "name": "Stop Strip",
+      "kind": "nav",
+      "refersTo": "sign",
+      "description": "Stop buttons strung along a short ink road with yellow dashes.",
+      "html": "<nav class=\"ds-stops\" aria-label=\"Stops\"><div class=\"ds-stops-road\"></div><ul class=\"ds-stops-list\"><li><button class=\"ds-stop\">FashionHub</button></li><li><button class=\"ds-stop\">Sprig &amp; Stone</button></li><li><button class=\"ds-stop\">About Ian</button></li></ul></nav>",
+      "css": ".ds-stops { position: relative; } .ds-stops-road { position: absolute; left: 24px; right: 24px; top: 50%; height: 16px; transform: translateY(-50%); border-radius: 9999px; background: #1d2433 repeating-linear-gradient(90deg, #ffc93c 0 14px, transparent 14px 26px) center / 100% 3px no-repeat; } .ds-stops-list { position: relative; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0; padding: 0; list-style: none; } .ds-stop { display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border: 2px solid #1d2433; border-radius: 8px; background: #ffc93c; color: #1d2433; font-family: Fredoka, sans-serif; font-weight: 600; font-size: 15px; box-shadow: 0 3px 0 #1d2433; cursor: pointer; transition: transform 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-stop:hover { transform: translateY(-1px); } .ds-stop:active { transform: translateY(3px); box-shadow: none; } .ds-stop:focus-visible { outline: 3px solid #1d2433; outline-offset: 2px; box-shadow: 0 0 0 6px #ffc93c; }"
+    },
+    {
+      "name": "Flank Stripes",
+      "kind": "custom",
+      "refersTo": "roof-teal",
+      "description": "The jeepney's red, yellow and teal flank stripes on ink, at every seam between island, route board and pier.",
+      "html": "<div class=\"ds-stripes\" aria-hidden=\"true\"><div class=\"ds-s-red\"></div><div class=\"ds-s-yellow\"></div><div class=\"ds-s-teal\"></div></div>",
+      "css": ".ds-stripes { display: flex; flex-direction: column; gap: 3px; padding: 3px 0; background: #1d2433; } .ds-s-red { height: 10px; background: #c41e30; } .ds-s-yellow { height: 6px; background: #ffc93c; } .ds-s-teal { height: 10px; background: #2a9d8f; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Painted Route Board",
+    "overview": "Every piece of HTML on Biyahe is signage off a Filipino jeepney: yellow route plates with an ink rim, a solid ink ledge each plate stands on, red stop strips, an ink road with a yellow dashed centre line, and the jeepney's red-yellow-teal flank stripes where one part of the page meets the next. The HTML was brought into the island's world rather than laid over it, so its colours are the island's own (the sky, the jeepney's red, its route boards, the sea at the pier).\n\nThe surface is bold, flat and hand-painted. Colour is solid, never gradient or glass; depth is a printed ledge, never a blur. Labels are set in a round, friendly display face; reading text is a plain, sturdy sans. Density is low: one action per plate, short lines, large touch targets.",
+    "keyCharacteristics": [
+      "Yellow plates with a 2px ink rim and a 3px solid ink ledge; pressing a plate drops it into its ledge.",
+      "Jeepney red for the one most important action on a screen and for the \"Stop N · landmark\" strip.",
+      "Ink road with yellow 14/12 dashes as the page's connecting line, from the island down the route board to the pier.",
+      "Fredoka for every label and heading, Rubik for reading text.",
+      "Drawn SVG icons in one 2.25px round stroke; drawn SVG cursors in the plate colours."
+    ],
+    "rules": [
+      { "name": "The Island Palette Rule", "body": "Every colour comes from the island or the jeepney. A new colour needs a source in `src/components/world` first.", "section": "colors" },
+      { "name": "The Red Lettering Rule", "body": "Red text on yellow is always `red-deep`; plain `red` is a fill, never lettering on a plate.", "section": "colors" },
+      { "name": "The One Red Plate Rule", "body": "A screen region has at most one red sign: the action that matters most there. Everything else is yellow or paper.", "section": "colors" },
+      { "name": "The Sign-Writer Rule", "body": "Anything you click, or that names a place, is Fredoka. Anything you read in sentences is Rubik.", "section": "typography" },
+      { "name": "The Ledge Rule", "body": "Ledges are solid ink, straight down, sized by importance (3, 4, 6px). Signs press down into theirs (move 3px, ledge disappears); plates that only label keep the ledge but never move. No soft shadows, no coloured ledges, no sideways offsets.", "section": "elevation" }
+    ],
+    "dos": [
+      "**Do** build every new control from the sign family: yellow by default, paper when quiet, red for the single most important action.",
+      "**Do** put red lettering on yellow only in `red-deep`.",
+      "**Do** give raised pieces an ink ledge sized 3, 4 or 6px, straight down, and make only pressable signs move.",
+      "**Do** set labels and place names in Fredoka 600 and sentences in Rubik.",
+      "**Do** draw icons as inline SVG in the 2.25px round stroke and let the text beside them carry the meaning.",
+      "**Do** connect sections with the ink road and mark seams with the flank stripes.",
+      "**Do** give every animation a still version under reduced motion."
+    ],
+    "donts": [
+      "**Don't** use frosted or blurred glass panels, soft or blurred shadows, or gradients on HTML surfaces.",
+      "**Don't** make pill-shaped buttons or chips; signs are 8px plates. Circles are for route markers only.",
+      "**Don't** lay projects out as a card grid; they are stops on one route.",
+      "**Don't** use plain `red` for text on yellow, or teal for anything but the stripes.",
+      "**Don't** introduce a colour that isn't on the island or the jeepney."
+    ]
+  }
+}

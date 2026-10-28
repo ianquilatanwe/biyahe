@@ -6,10 +6,10 @@
 export function Loading({ done }: { done: boolean }) {
   return (
     <div
-      className={`absolute inset-0 grid place-items-center bg-sky transition-opacity duration-500 motion-reduce:transition-none ${done ? "pointer-events-none opacity-0" : ""}`}
+      className={`absolute inset-0 z-[9] grid place-items-center bg-sky transition-opacity duration-500 motion-reduce:transition-none ${done ? "pointer-events-none opacity-0" : ""}`}
     >
       <div className="flex flex-col items-center gap-5">
-        <p className="rounded-lg border-2 border-ink bg-yellow px-6 py-1.5 font-display text-2xl font-semibold text-red shadow-[0_3px_0_var(--color-ink)]">
+        <p className="rounded-lg border-2 border-ink bg-yellow px-6 py-1.5 font-display text-2xl font-semibold text-red-deep shadow-[0_3px_0_var(--color-ink)]">
           Island loop
         </p>
         <div className="relative h-9 w-56 overflow-hidden">

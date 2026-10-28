@@ -12,6 +12,8 @@ import type { Destination } from "../IslandExperience";
 import { Island } from "./Island";
 import { Jeepney, type JeepneyParts } from "./Jeepney";
 import { Landmarks } from "./Landmarks";
+import { StopSigns } from "./StopSigns";
+import { TapMarker } from "./TapMarker";
 import { useCalm } from "./useCalm";
 import { useKeys } from "./useKeys";
 
@@ -57,6 +59,10 @@ function Driver({ driving, destination, onNear, onArrive }: DriverProps) {
     if (!driving) {
       input = NO_INPUT;
       destination.current = null; // a card opened mid-trip ends the trip: closing it must not drive off on its own
+    } else if (keys.braking()) {
+      destination.current = null; // Space stops the jeepney, trip and all
+      const v = car.current.speed;
+      input = { throttle: Math.abs(v) > 0.2 ? -Math.sign(v) : 0, steer: input.steer };
     } else if (input.throttle || input.steer) {
       destination.current = null;
     } else if (trip) {
@@ -123,11 +129,14 @@ type WorldProps = DriverProps & {
   active: boolean;
   onGoTo: (d: Destination) => void;
   onGoToStop: (id: string) => void;
+  /** The stop the jeepney is parked at: its sign turns into an Open button. */
+  nearId: string | null;
+  onOpen: (id: string) => void;
   /** Called once, when the island has drawn its first frames. No WebGL throws instead, and IslandBoundary catches it. */
   onReady: () => void;
 };
 
-export default function World({ active, onGoTo, onGoToStop, onReady, ...driver }: WorldProps) {
+export default function World({ active, onGoTo, onGoToStop, nearId, onOpen, onReady, ...driver }: WorldProps) {
   const [sharpness, setSharpness] = useState(1.75);
   return (
     <Canvas
@@ -145,6 +154,8 @@ export default function World({ active, onGoTo, onGoToStop, onReady, ...driver }
       <Island onGround={onGoTo} />
       <Landmarks onStop={onGoToStop} />
       <Driver {...driver} />
+      <TapMarker destination={driver.destination} />
+      <StopSigns nearId={nearId} onStop={onGoToStop} onOpen={onOpen} />
       <FirstFrames onReady={onReady} />
       {/* If a slow phone keeps dropping below ~50 fps, draw at 1 pixel per CSS pixel: fewer pixels, steadier frames.
           ponytail: one step down only; add more steps if real phones still struggle at dpr 1. */}

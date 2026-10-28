@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import { Fredoka, Inter } from "next/font/google";
+import { Fredoka, Rubik } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
+const rubik = Rubik({ variable: "--font-rubik", subsets: ["latin"] });
 const fredoka = Fredoka({ variable: "--font-fredoka", subsets: ["latin"] });
 
 // Absolute base for the social preview image: the Vercel production URL when
@@ -30,7 +30,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${fredoka.variable} font-sans antialiased`}>{children}</body>
+      <body className={`${rubik.variable} ${fredoka.variable} font-sans antialiased`}>{children}</body>
     </html>
   );
 }

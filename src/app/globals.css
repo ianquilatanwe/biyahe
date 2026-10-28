@@ -1,15 +1,16 @@
 @import "tailwindcss";
 
-/* Colour tokens: use them by name (text-ink, bg-sea, …). */
+/* Colour tokens: use them by name (text-ink, bg-sea, …). All taken from the island and the jeepney. */
 @theme {
-  --color-ink: #1d2433; /* text */
-  --color-sky: #f6c9a1; /* the island's sky, also the page behind it */
-  --color-sand: #f8eedb; /* project list background */
-  --color-sea: #0f5560; /* headings on sand (8:1) */
-  --color-red: #c41e30; /* jeepney red, buttons (5.6:1 with white) */
-  --color-yellow: #ffc93c;
-  --color-muted: #4a5468; /* secondary text (7:1 on sand) */
-  --color-edge: #e4d6b8;
+  --color-ink: #1d2433; /* text, rims, the road */
+  --color-sky: #f6c9a1; /* the island's sky, also the page ground below it */
+  --color-sea: #0f5560; /* the pier block at the end of the route (white text 8:1) */
+  --color-red: #c41e30; /* jeepney red (white text 5.9:1) */
+  --color-red-deep: #9e1426; /* red lettering on a yellow plate (5.3:1; plain red is only 3.8:1) */
+  --color-yellow: #ffc93c; /* route signboards */
+  --color-roof-teal: #2a9d8f; /* the jeepney roof: only the third flank stripe */
+  --color-muted: #4b3a2e; /* secondary text on sky: a dark sunset brown, 7.1:1 */
+  --color-paper: #fffaf2; /* the card face */
 
   /* The loading screen's jeepney drives across its little road. */
   --animate-drive: drive 2.4s linear infinite;
@@ -21,15 +22,30 @@
       transform: translateX(14rem);
     }
   }
+
+  /* The chevron under each landmark's sign, pointing at the building. */
+  --animate-bob: bob 1.4s ease-in-out infinite;
+  @keyframes bob {
+    50% {
+      transform: translateY(4px);
+    }
+  }
 }
 
 @theme inline {
-  --font-sans: var(--font-inter);
+  --font-sans: var(--font-rubik);
   --font-display: var(--font-fredoka);
+}
+
+/* Cursors: a yellow route-plate arrow, red over anything you can click or open. Hotspot at the tip. */
+:root {
+  --cursor: url("/cursors/arrow.svg") 3 2, auto;
+  --cursor-go: url("/cursors/arrow-go.svg") 3 2, pointer;
 }
 
 html {
   background: var(--color-sky);
+  cursor: var(--cursor);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -39,30 +55,40 @@ html {
 }
 
 body {
-  background: var(--color-sand);
+  background: var(--color-sky);
   color: var(--color-ink);
 }
 
-/* One clear keyboard focus ring everywhere. */
+a,
+button,
+[data-go] {
+  cursor: var(--cursor-go);
+}
+
+::selection {
+  background: var(--color-yellow);
+  color: var(--color-ink);
+}
+
+/* One clear keyboard focus ring everywhere: ink, with a yellow halo so it shows on red and on the island. */
 :focus-visible {
   outline: 3px solid var(--color-ink);
-  outline-offset: 3px;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px var(--color-yellow);
 }
 
-@utility btn-primary {
-  @apply inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full bg-red px-5 font-semibold text-white shadow-md transition hover:brightness-110 active:scale-[0.97];
-}
-
-/* On-island controls look like a jeepney's painted route signboard: yellow plate, ink rim,
-   a hard drop shadow that the button presses down into. */
+/* Stops, links and contacts look like a jeepney's painted route signboard: a plate with an ink rim and
+   a ledge underneath that the button presses down into. */
 @utility sign {
-  @apply inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-lg border-2 border-ink bg-yellow px-4 font-display font-semibold whitespace-nowrap text-ink shadow-[0_3px_0_var(--color-ink)] transition-transform hover:-translate-y-px active:translate-y-[3px] active:shadow-none;
+  @apply inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg border-2 border-ink bg-yellow px-4 font-display font-semibold whitespace-nowrap text-ink shadow-[0_3px_0_var(--color-ink)] transition-transform hover:-translate-y-px active:translate-y-[3px] active:shadow-none;
 }
 
-@utility sign-quiet {
-  @apply inline-flex cursor-pointer items-center justify-center rounded-lg font-semibold text-white hover:bg-white/15;
+/* The same plate in jeepney red, for the one action that matters most on a screen (hire, open). */
+@utility sign-red {
+  @apply sign bg-red text-white;
 }
 
-@utility panel {
-  @apply rounded-2xl bg-white/90 shadow-md backdrop-blur;
+/* A plate that only labels: no ledge, it doesn't press. */
+@utility plate {
+  @apply inline-flex items-center rounded-lg border-2 border-ink bg-yellow font-display font-semibold text-ink;
 }

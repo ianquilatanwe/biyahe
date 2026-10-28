@@ -1,3 +1,6 @@
+export const UPWORK = "https://www.upwork.com/freelancers/ianquilatan";
+export const LINKEDIN = "https://www.linkedin.com/in/ianquilatan";
+
 /** The five stops around the island. Each one is a real project (or the "about" pier). */
 export type Stop = {
   id: string;
@@ -6,7 +9,8 @@ export type Stop = {
   title: string;
   blurb: string;
   stack: string;
-  links: { label: string; href: string }[];
+  /** `primary` is drawn in jeepney red: the one link that matters most on that card. */
+  links: { label: string; href: string; primary?: boolean }[];
   /** Screenshot in public/shots, 1200 × 750. */
   shot?: string;
   /** Where it sits on the island: angle in degrees around the centre (0 = towards the camera). */
@@ -69,12 +73,21 @@ export const stops: Stop[] = [
   },
   {
     id: "about",
-    name: "Pier",
+    name: "About Ian", // "Pier" alone didn't say what's there
     landmark: "Pier",
     title: "About Ian",
     blurb: "Frontend developer in the Philippines (UTC+8). Figma to UI, bug fixes, API wiring and responsive layouts, in React, Next.js and Flutter.",
     stack: "React · Next.js · TypeScript · Tailwind CSS · Flutter",
-    links: [{ label: "GitHub", href: "https://github.com/ianquilatanwe" }],
+    links: [
+      { label: "Hire me on Upwork", href: UPWORK, primary: true },
+      { label: "LinkedIn", href: LINKEDIN },
+      { label: "GitHub", href: "https://github.com/ianquilatanwe" },
+    ],
     angle: 10,
   },
 ];
+
+/** The red strip on a stop's card: "Stop 2 · Plant nursery", or "Last stop · Pier" for the about stop. */
+export function stopLabel(stop: Stop) {
+  return stop.id === "about" ? `Last stop · ${stop.landmark}` : `Stop ${stops.indexOf(stop) + 1} · ${stop.landmark}`;
+}

@@ -219,7 +219,7 @@ export function Landmarks({ onStop }: { onStop: (id: string) => void }) {
   const beam = useRef<Group>(null!);
   const boat = useRef<Group>(null!);
   const calm = useCalm();
-  // The hand cursor goes on the canvas, not the page: scrolling away from a hovered landmark fires no
+  // The "go" cursor goes on the canvas, not the page: scrolling away from a hovered landmark fires no
   // "pointer out", and a body cursor would then stick over the project list.
   const canvas = useThree((s) => s.gl.domElement);
   const setCursor = (c: string) => () => (canvas.style.cursor = c);
@@ -246,7 +246,7 @@ export function Landmarks({ onStop }: { onStop: (id: string) => void }) {
             e.stopPropagation();
             onStop(s.id);
           }}
-          onPointerOver={setCursor("pointer")}
+          onPointerOver={setCursor("var(--cursor-go)")}
           onPointerOut={setCursor("")}
         >
           <cylinderGeometry args={[LANDMARKS[i].r, LANDMARKS[i].r, s.id === "lumenfold" ? 16 : 3, 8]} />

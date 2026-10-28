@@ -53,6 +53,18 @@ everything is built from code primitives. Distilled from the `threejs-react-thre
   the count climbs (target under ~150 draw calls on the whole island).
 - No new texture or model files unless they're small (whole island under 1 MB of assets).
 
+## The HTML layer (signboard style)
+- Every HTML piece is jeepney signage: `sign` (yellow plate, ink rim, ink ledge it presses into), `sign-red` (the one
+  action that matters most on a screen), `plate` (a label that doesn't press), red "Stop N · landmark" strips.
+  No frosted glass, pills or plain card grids. Tokens in `globals.css`; red lettering on yellow uses `red-deep` (plain red is 3.8:1).
+- One project ticket, `StopDetails`, is both the island's card and the route board's card, so they can't drift apart.
+- External links always open in a new tab (Ian's call) with "(opens in a new tab)" for screen readers.
+- In-world signs (`StopSigns`) are drei `<Html>` with an explicit `portal`: without it `<Html>` follows fiber's event
+  target, which changes after the first render, and the first sign came up empty. Layers: signs z 1–8, loader z 9,
+  controls z 10, header z 20.
+- Taps and stop trips show `TapMarker` chevrons; the autopilot plans round landmarks with `aimPoint` (tangent points).
+  `driving.check.ts` runs 500 seeded random taps and fails if fewer than 97% arrive or the slowest 5% exceed 6.5 s.
+
 ## Accessibility and fallback
 - The HTML comes first: the name, the skip link and the full project list render without WebGL or JS.
 - The canvas wrapper is `aria-hidden`; nothing focusable may live inside it.
@@ -65,7 +77,10 @@ everything is built from code primitives. Distilled from the `threejs-react-thre
 - Stop buttons announce the drive in a polite live region; the card takes focus when it opens.
 - Every stop is reachable without driving skill (stop list buttons, from day 2).
 - Reduced motion (`useCalm`, read live): no bounce, lean, look-ahead or ambient animation.
-- Keys only drive while the island is on screen; arrows scroll the page otherwise.
+- Keys only drive while the island is on screen; arrows and Space scroll the page otherwise. Space brakes, except on a
+  focused button or link, where it presses it.
+- The in-world signs are mouse/touch only (no focus inside the aria-hidden wrapper); the keyboard gets the stop buttons,
+  E, and an Open button that is visually hidden until focused.
 
 ## Process
 - Four-day time box with a clip after each day; follow `~/upwork/CLAUDE.md` (no unannounced

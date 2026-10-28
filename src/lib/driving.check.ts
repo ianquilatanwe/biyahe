@@ -1,8 +1,8 @@
 // Quick self-check for the driving and layout rules. Run: node src/lib/driving.check.ts
 import assert from "node:assert/strict";
-import { autopilot, NO_INPUT, reachable, shoreLimit, step, type Car, type Input } from "./driving.ts";
+import { aimPoint, autopilot, NO_INPUT, reachable, shoreLimit, step, type Car, type Input } from "./driving.ts";
 import { stops as realStops } from "./stops.ts";
-import { LANDMARKS, nearestStop, parkingSpot, stopPosition, type Circle, type Point } from "./world.ts";
+import { coastRadius, LANDMARKS, nearestStop, parkingSpot, stopPosition, type Circle, type Point } from "./world.ts";
 
 const DT = 1 / 60;
 const run = (car: Car, input: Input, seconds: number, obstacles: Circle[] = []) => {
@@ -68,6 +68,17 @@ for (const o of LANDMARKS) {
   }
 }
 
+// A landmark across the straight line: aim beside it, not at the target. A clear line: aim at the target.
+const across = aimPoint({ x: 0, z: 0 }, { x: 0, z: -12 }, [post]);
+assert.ok(Math.abs(across.x) > post.r + 1.3, "aims round a landmark in the way");
+assert.deepEqual(aimPoint({ x: 0, z: 0 }, { x: 0, z: -12 }, []), { x: 0, z: -12 }, "aims straight when the way is clear");
+
+// A tap between a landmark and the sea parks in front of the landmark, on the island side.
+for (const o of LANDMARKS) {
+  const behind = reachable({ x: o.x * 1.08, z: o.z * 1.08 }, LANDMARKS);
+  assert.ok(Math.hypot(behind.x, behind.z) < Math.hypot(o.x, o.z), "tap behind a landmark parks in front of it");
+}
+
 // Stop-to-stop trips from awkward starts (random offset, heading and speed) around the real landmarks.
 const angles = realStops.map((s) => s.angle);
 const landmarks = LANDMARKS;
@@ -89,4 +100,32 @@ for (let i = 0; i < 200; i++) {
 assert.ok(arrived >= 196, `autopilot arrives on at least 98% of awkward trips (got ${arrived}/200)`);
 assert.ok(Math.hypot(stopPosition(0).x, stopPosition(0).z - 19) < 1e-9, "angle 0 points at the camera");
 
-console.log(`driving: all checks pass (autopilot sweep ${arrived}/200)`);
+// Random taps from random spots and headings (seeded, so the run is the same every time): nearly all arrive,
+// and quickly. Before path planning round landmarks, 86% arrived and the slowest 5% took 9 s or more.
+let seed = 7;
+const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const randomTap = () => {
+  const a = rnd() * Math.PI * 2;
+  const r = Math.sqrt(rnd()) * coastRadius(a);
+  return reachable({ x: Math.cos(a) * r, z: Math.sin(a) * r }, LANDMARKS);
+};
+const times: number[] = [];
+for (let i = 0; i < 500; i++) {
+  const from = randomTap();
+  const to = randomTap();
+  let car: Car = { ...from, yaw: rnd() * Math.PI * 2, speed: 0, yawRate: 0 };
+  for (let t = 0; t < 12; t += DT) {
+    const input = autopilot(car, to, LANDMARKS);
+    if (!input) {
+      times.push(t);
+      break;
+    }
+    car = step(car, input, DT, LANDMARKS);
+  }
+}
+times.sort((a, b) => a - b);
+const p95 = times[Math.floor(times.length * 0.95)];
+assert.ok(times.length >= 485, `random taps arrive at least 97% of the time (got ${times.length}/500)`);
+assert.ok(p95 < 6.5, `95% of tap trips arrive within 6.5 s (got ${p95.toFixed(1)} s)`);
+
+console.log(`driving: all checks pass (stop sweep ${arrived}/200, random taps ${times.length}/500, 95% within ${p95.toFixed(1)} s)`);

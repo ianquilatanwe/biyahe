@@ -6,7 +6,7 @@ import { Component, type ReactNode } from "react";
 export function NoIsland() {
   return (
     <div className="grid h-full place-items-center p-6 text-center">
-      <p className="max-w-sm rounded-2xl bg-white/90 p-5 text-ink">This browser can’t show the 3D island. Every project is in the list below.</p>
+      <p className="max-w-sm rounded-xl border-[3px] border-ink bg-paper p-5 text-ink shadow-[0_6px_0_var(--color-ink)]">This browser can’t show the 3D island. Every project is in the list below.</p>
     </div>
   );
 }

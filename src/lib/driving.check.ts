@@ -128,4 +128,35 @@ const p95 = times[Math.floor(times.length * 0.95)];
 assert.ok(times.length >= 485, `random taps arrive at least 97% of the time (got ${times.length}/500)`);
 assert.ok(p95 < 6.5, `95% of tap trips arrive within 6.5 s (got ${p95.toFixed(1)} s)`);
 
-console.log(`driving: all checks pass (stop sweep ${arrived}/200, random taps ${times.length}/500, 95% within ${p95.toFixed(1)} s)`);
+// Start right beside a landmark, tap its other side, from all round and facing every way. Before the
+// "never round the back" rule and glancing bumps, about 1 in 14 of these got wedged or crawled.
+let besideTrips = 0;
+let besideArrived = 0;
+for (const o of LANDMARKS) {
+  for (let deg = 0; deg < 360; deg += 20) {
+    for (const off of [0.1, 0.6]) {
+      const a = (deg * Math.PI) / 180;
+      const d = o.r + 1.3 + off;
+      const from = reachable({ x: o.x + Math.cos(a) * d, z: o.z + Math.sin(a) * d }, LANDMARKS);
+      const to = reachable({ x: o.x - Math.cos(a) * (d + 1), z: o.z - Math.sin(a) * (d + 1) }, LANDMARKS);
+      if (Math.hypot(to.x - from.x, to.z - from.z) < 3) continue;
+      for (let y = 0; y < 4; y++) {
+        let car: Car = { ...from, yaw: (y * Math.PI) / 2, speed: 0, yawRate: 0 };
+        besideTrips++;
+        for (let t = 0; t < 12; t += DT) {
+          const input = autopilot(car, to, LANDMARKS);
+          if (!input) {
+            besideArrived++;
+            break;
+          }
+          car = step(car, input, DT, LANDMARKS);
+        }
+      }
+    }
+  }
+}
+assert.ok(besideArrived >= besideTrips * 0.98, `trips round a landmark from right beside it arrive (got ${besideArrived}/${besideTrips})`);
+
+console.log(
+  `driving: all checks pass (stop sweep ${arrived}/200, random taps ${times.length}/500, 95% within ${p95.toFixed(1)} s, beside a landmark ${besideArrived}/${besideTrips})`,
+);

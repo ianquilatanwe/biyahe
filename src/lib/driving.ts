@@ -46,7 +46,8 @@ export function reachable(p: Point, obstacles: Circle[] = []): Point {
     let dz = z - o.z;
     let d = Math.hypot(dx, dz);
     const oR = Math.hypot(o.x, o.z);
-    if (d < min + CLEARANCE && (x * o.x + z * o.z) / oR > oR) {
+    // Seaward of its centre and no further to the side than its edge: in its shadow towards the water.
+    if (Math.abs(x * o.z - z * o.x) / oR < min && (x * o.x + z * o.z) / oR > oR) {
       // Seaward side: park in front instead.
       [x, z] = [o.x - (o.x / oR) * (min + 0.2), o.z - (o.z / oR) * (min + 0.2)];
       continue;
@@ -80,6 +81,11 @@ export function step(car: Car, input: Input, dt: number, obstacles: Circle[] = [
   let x = car.x + Math.sin(yaw) * speed * dt;
   let z = car.z + Math.cos(yaw) * speed * dt;
 
+  // How head-on a bump is, 0 (sliding along) to 1 (straight in), given the wall's outward normal.
+  // Only that part costs speed: a flat per-frame cut left a jeepney touching a wall crawling at walking
+  // pace, too slow to steer away (steering needs speed).
+  const headOn = (nx: number, nz: number) => clamp(-(Math.sin(yaw) * nx + Math.cos(yaw) * nz) * Math.sign(speed), 0, 1);
+
   // Soft bump against landmarks: slide out to their edge and lose some speed.
   for (const o of obstacles) {
     const dx = x - o.x;
@@ -89,7 +95,7 @@ export function step(car: Car, input: Input, dt: number, obstacles: Circle[] = [
     if (d > 0 && d < min) {
       x = o.x + (dx / d) * min;
       z = o.z + (dz / d) * min;
-      speed *= 0.5;
+      speed *= 1 - 0.5 * headOn(dx / d, dz / d);
     }
   }
 
@@ -99,7 +105,7 @@ export function step(car: Car, input: Input, dt: number, obstacles: Circle[] = [
   if (r > limit) {
     x *= limit / r;
     z *= limit / r;
-    speed *= 0.6;
+    speed *= 1 - 0.4 * headOn(-x / limit, -z / limit);
   }
 
   return { x, z, yaw, speed, yawRate };
@@ -107,6 +113,7 @@ export function step(car: Car, input: Input, dt: number, obstacles: Circle[] = [
 
 /** Angle wrapped to -π..π, so a turn always goes the short way round. */
 const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+const TAU = Math.PI * 2;
 
 /**
  * Where to aim right now on the way to `target`. If a landmark sits across the straight line, aim
@@ -132,17 +139,26 @@ export function aimPoint(from: Point, target: Point, obstacles: Circle[], depth 
   // Which way round: the side of the landmark the straight line passes, unless that's in the sea.
   const cross = dx * (o.z - from.z) - dz * (o.x - from.x); // > 0: landmark left of the line, so pass on the right
   let side = cross > 0 ? -1 : 1;
-  const len = Math.sqrt(len2);
-  const around = (s: number) => ({ x: o.x - (dz / len) * s * R, z: o.z + (dx / len) * s * R });
-  const wet = (p: Point) => Math.hypot(p.x, p.z) > shoreLimit(p.x, p.z);
-  if (wet(around(side)) && !wet(around(-side))) side = -side;
-
-  // Tangent point from `from` onto the circle; from inside it, a point a little further round instead.
   const ax = from.x - o.x;
   const az = from.z - o.z;
+  const aFrom = Math.atan2(az, ax);
+  if (shoreLimit(o.x, o.z) - Math.hypot(o.x, o.z) - o.r - CAR_RADIUS < 2 * CLEARANCE) {
+    // Too little room behind it (every landmark today: they sit by the shore). Going round this way
+    // means sweeping from our bearing to the target's; if that sweep crosses the landmark's back,
+    // go the other way. Probing one point for water missed this and wedged the jeepney behind it.
+    const sweep = (a: number) => (((-side * (a - aFrom)) % TAU) + TAU) % TAU;
+    if (sweep(Math.atan2(o.z, o.x)) < sweep(Math.atan2(target.z - o.z, target.x - o.x))) side = -side;
+  } else {
+    const len = Math.sqrt(len2);
+    const around = (s: number) => ({ x: o.x - (dz / len) * s * R, z: o.z + (dx / len) * s * R });
+    const wet = (p: Point) => Math.hypot(p.x, p.z) > shoreLimit(p.x, p.z);
+    if (wet(around(side)) && !wet(around(-side))) side = -side;
+  }
+
+  // Tangent point from `from` onto the circle; from inside it, a point a little further round instead.
   const d = Math.hypot(ax, az) || 1e-9;
   const turn = d > R ? Math.acos(R / d) : 0.7;
-  const a = Math.atan2(az, ax) - side * turn;
+  const a = aFrom - side * turn;
   const aim = { x: o.x + Math.cos(a) * R, z: o.z + Math.sin(a) * R };
   // Another landmark in the way of the aim point gets the same treatment.
   return aimPoint(from, aim, obstacles, depth - 1);
@@ -174,7 +190,9 @@ export function autopilot(car: Car, target: Point, obstacles: Circle[] = [], arr
     const z = car.z + Math.cos(car.yaw) * ahead;
     return Math.hypot(x, z) > shoreLimit(x, z) || obstacles.some((o) => Math.hypot(x - o.x, z - o.z) < o.r + 0.5);
   };
-  const noseStuck = blockedAt(2.6);
+  // Once backing out, keep going until the nose has real room, or it rocks back and forth on the spot.
+  // Aim behind with little room ahead: a forward U-turn won't fit, so back round first.
+  const noseStuck = blockedAt(2.6) || ((car.speed < -0.1 || Math.abs(diff) > 2.2) && blockedAt(4.5));
   const tailStuck = blockedAt(-2.6);
   if (noseStuck && !tailStuck && car.speed < 1) return { throttle: -0.8, steer: diff > 0 ? -1 : 1 };
   if (tailStuck && car.speed > -1 && (noseStuck || Math.abs(diff) > 2.2)) return { throttle: 0.8, steer: diff > 0 ? 1 : -1 };

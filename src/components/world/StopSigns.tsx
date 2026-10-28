@@ -44,29 +44,31 @@ function placer(box: RefObject<HTMLDivElement | null>) {
       const edge = base.z > 1 || bx < 0 || bx > size.width || by < 0 || by > size.height; // the landmark itself is out of frame
       // The tail points down at the landmark; once the sign has moved, towards the landmark's foot (or, out of
       // frame, towards where it is). It leaves the plate's rectangle on that side, on the straight part of
-      // the edge (clear of the rounded corners), and turns at most 45° off square so it stays a clean pointer.
-      let a = moved ? (edge ? Math.atan2(y - cy, x - cx) : Math.atan2(by - cy, bx - cx)) : Math.PI / 2;
+      // the edge (clear of the rounded corners). Its base stays flat on that edge and only its tip leans,
+      // at most 45°: turning the whole tail lifted one end of its base ~4px off the plate.
+      const a = moved ? (edge ? Math.atan2(y - cy, x - cx) : Math.atan2(by - cy, bx - cx)) : Math.PI / 2;
       const hw = plate.offsetWidth / 2;
       const hh = plate.offsetHeight / 2;
       const k = Math.max(Math.abs(Math.cos(a)) / hw, Math.abs(Math.sin(a)) / hh);
       let ox = Math.cos(a) / k;
       let oy = Math.sin(a) / k;
       const corner = 17; // 8px radius plus half the tail
+      let n: number; // the edge's outward direction
       if (Math.abs(Math.abs(oy) - hh) < 0.5) {
         ox = Math.max(-(hw - corner), Math.min(hw - corner, ox)); // top or bottom edge
-        a = Math.max(Math.sign(oy) * (Math.PI / 2) - Math.PI / 4, Math.min(Math.sign(oy) * (Math.PI / 2) + Math.PI / 4, a));
+        n = Math.sign(oy) * (Math.PI / 2);
       } else {
         oy = 0; // a side: the plate is only ~36px tall, so the middle is the only straight part
-        const n = ox > 0 ? 0 : Math.PI;
-        a = n + Math.max(-Math.PI / 4, Math.min(Math.PI / 4, Math.atan2(Math.sin(a - n), Math.cos(a - n))));
+        n = ox > 0 ? 0 : Math.PI;
       }
+      const lean = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, Math.atan2(Math.sin(a - n), Math.cos(a - n))));
       const pull = 1 - 3 / Math.hypot(ox, oy); // overlap the rim by 3px
-      const vars = `${edge}|${(hw + ox * pull).toFixed(1)}|${(hh + oy * pull).toFixed(1)}|${(a - Math.PI / 2).toFixed(3)}|${scale.toFixed(2)}`;
+      const vars = `${edge}|${(hw + ox * pull).toFixed(1)}|${(hh + oy * pull).toFixed(1)}|${(n - Math.PI / 2).toFixed(3)}|${(-lean).toFixed(3)}|${scale.toFixed(2)}`;
       if (b.dataset.v !== vars) {
-        const [e, px, py, rot, s] = vars.split("|");
+        const [e, px, py, rot, skew, s] = vars.split("|");
         b.dataset.v = vars;
         b.dataset.edge = e;
-        b.style.cssText = `--px:${px}px;--py:${py}px;--rot:${rot}rad;--s:${s}`;
+        b.style.cssText = `--px:${px}px;--py:${py}px;--rot:${rot}rad;--skew:${skew}rad;--s:${s}`;
       }
     }
     return [cx, cy];
@@ -108,11 +110,12 @@ export function StopSigns({ nearId, onStop, onOpen }: { nearId: string | null; o
             >
               {near ? `Open ${s.name}` : s.name}
               {near && <kbd className="ml-1 hidden rounded border-2 border-white/70 px-1 font-display text-xs leading-tight md:inline">E</kbd>}
-              {/* The tail: the plate's own fill and rim, pinned to its border and turned to point (-2px: positions count from inside the rim). */}
+              {/* The tail: the plate's own fill and rim, pinned to its border, turned square to that edge, its tip
+                  leaning to point (skewed round its base, so the base stays on the edge; -2px: positions count from inside the rim). */}
               <span aria-hidden="true" className="absolute top-[calc(var(--py)-2px)] left-[calc(var(--px)-2px)] size-0 [rotate:var(--rot)]">
                 <svg
                   viewBox="0 0 18 12"
-                  className={`absolute top-0 left-0 w-[18px] -translate-x-1/2 ${near ? "text-red" : "text-yellow group-data-[edge=true]:text-paper"}`}
+                  className={`absolute top-0 left-0 w-[18px] origin-top -translate-x-1/2 overflow-visible [transform:skewX(var(--skew,0))] ${near ? "text-red" : "text-yellow group-data-[edge=true]:text-paper"}`}
                 >
                   <path d="M0 0L9 11L18 0Z" fill="currentColor" />
                   <path d="M0.5 0.5L9 10.5L17.5 0.5" fill="none" stroke="var(--color-ink)" strokeWidth="2" strokeLinejoin="round" />

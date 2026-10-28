@@ -63,7 +63,12 @@ everything is built from code primitives. Distilled from the `threejs-react-thre
   target, which changes after the first render, and the first sign came up empty. Layers: signs z 1–8, loader z 9,
   controls z 10, header z 20.
 - Taps and stop trips show `TapMarker` chevrons; the autopilot plans round landmarks with `aimPoint` (tangent points).
-  `driving.check.ts` runs 500 seeded random taps and fails if fewer than 97% arrive or the slowest 5% exceed 6.5 s.
+  `driving.check.ts` runs 500 seeded random taps and fails if fewer than 97% arrive or the slowest 5% exceed 6.5 s,
+  plus trips from right beside each landmark to its far side (98% must arrive).
+  Every landmark's back (the strip to the sea) is too narrow to drive: `aimPoint` never plans round it, and a tap in
+  its shadow parks in front. Bumps only cost the head-on part of the speed, so a jeepney sliding along a wall can still steer.
+- In-world sign tails keep their base flat on the plate edge and lean only the tip (CSS skew); rotating the whole
+  tail lifts one end of the base off the plate.
 
 ## Accessibility and fallback
 - The HTML comes first: the name, the skip link and the full project list render without WebGL or JS.

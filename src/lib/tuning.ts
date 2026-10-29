@@ -15,8 +15,9 @@ export const tuning = {
   lean: 0.005, // how far the body leans out of turns
   bounce: 0.03, // suspension jiggle at speed
   // camera
-  cameraHeight: 16, // steeper than the island (12 / 20): the town has rooftops to see over
-  cameraDistance: 18,
+  cameraHeight: 22, // steeper than the island (12 / 20): the town has rooftops to see over
+  cameraDistance: 25, // was 16 / 18: pulled back ~1.4x to show more of the bigger town
+  fadeRadius: 4, // metres round the jeepney where buildings in front of it dither away
   lookAhead: 0.3, // seconds of travel the camera looks ahead
   cameraFollow: 4, // higher = the camera catches up faster
 };

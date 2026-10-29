@@ -235,31 +235,38 @@ function promenade(b: Batch) {
 }
 
 /**
- * The rest of town, beyond the outer streets: a row of shophouses along the west, south and east edges, so the town
- * carries on past where you can drive instead of stopping at a cliff. Lower detail; not in the colliders: the square's
- * edge stops the jeepney first. The south row faces away from the camera, so it shows only roofs.
+ * The rest of town, beyond the outer streets: rows of shophouses along the west, south and east edges, three deep with
+ * an alley between, so the town carries on past where you can drive instead of stopping at a cliff (the camera sees
+ * ~25 m past the south street and further at the top corners). Lower detail; not in the colliders: the square's edge
+ * stops the jeepney first. Only the first row's fronts face town; the rows behind and the south rows (which face
+ * away from the camera) show only roofs and backs. The south rows run on past the corners, the side rows stop short.
  */
 function edgeRow(b: Batch, rnd: () => number) {
   const from = EDGE + SIDEWALK_WIDTH;
   const depth = 7;
-  const lay = (place: (along: number) => Vec, yaw: number, front: boolean, most: number) => {
-    for (let along = -60; along < 60; ) {
-      const len = 4 + rnd() * 3.5;
-      const storeys = 1 + Math.floor(rnd() * most);
-      b.place(place(along + len / 2), yaw, () => shophouse(b, len, depth, storeys, rnd, { front, low: true }));
-      along += len;
+  const alley = 2;
+  const lay = (place: (out: number, along: number) => Vec, yaw: number, side: boolean, start: number, end: number) => {
+    for (let ring = 0; ring < 3; ring++) {
+      const out = from + ring * (depth + alley);
+      for (let along = start; along < end; ) {
+        const len = 4 + rnd() * 3.5;
+        const storeys = 1 + Math.floor(rnd() * (side ? 2 : 1));
+        const front = side && ring === 0;
+        b.place(place(out, along + len / 2), yaw, () => shophouse(b, len, depth, storeys, rnd, { front, low: true }));
+        along += len;
+      }
     }
   };
   b.flat(() => {
     for (const [w, d, x, z] of [
-      [SIDEWALK_WIDTH, 120, -EDGE - 1, 0],
-      [SIDEWALK_WIDTH, 120, EDGE + 1, 0],
-      [120, SIDEWALK_WIDTH, 0, EDGE + 1],
+      [SIDEWALK_WIDTH, 100, -EDGE - 1, -12],
+      [SIDEWALK_WIDTH, 100, EDGE + 1, -12],
+      [150, SIDEWALK_WIDTH, 0, EDGE + 1],
     ]) b.box(SIDEWALK, [w, 0.02, d], [x, 0.01, z]);
   });
-  lay((a) => [-from, 0, a], Math.PI / 2, true, 2); // west edge, facing east into town
-  lay((a) => [from, 0, a], -Math.PI / 2, true, 2); // east edge, facing west
-  lay((a) => [a, 0, from], Math.PI, false, 1); // south edge, facing north (away from the camera), kept low
+  lay((out, a) => [-out, 0, a], Math.PI / 2, true, -60, EDGE); // west, facing east into town
+  lay((out, a) => [out, 0, a], -Math.PI / 2, true, -60, EDGE); // east, facing west
+  lay((out, a) => [a, 0, out], Math.PI, false, -75, 75); // south, facing north (away from the camera), kept low
 }
 
 function buildTown(b: Batch) {

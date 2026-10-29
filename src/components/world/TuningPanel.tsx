@@ -16,6 +16,7 @@ const RANGES: Record<keyof Tuning, Range> = {
   bounce: [0, 0.05, 0.001],
   cameraHeight: [4, 30, 0.5],
   cameraDistance: [6, 40, 0.5],
+  fadeRadius: [1, 10, 0.5],
   lookAhead: [0, 1, 0.05],
   cameraFollow: [0.5, 12, 0.5],
 };
@@ -39,7 +40,7 @@ export default function TuningPanel() {
   useControls({
     Driving: folder(sliders(["accel", "brake", "maxForward", "maxReverse", "drag", "turn"])),
     Body: folder(sliders(["lean", "bounce"])),
-    Camera: folder(sliders(["cameraHeight", "cameraDistance", "lookAhead", "cameraFollow"])),
+    Camera: folder(sliders(["cameraHeight", "cameraDistance", "lookAhead", "cameraFollow", "fadeRadius"])),
     "Copy values": button(() => navigator.clipboard.writeText(JSON.stringify(tuning, null, 2))),
   });
   return null;

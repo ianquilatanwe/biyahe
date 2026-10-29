@@ -9,7 +9,7 @@ import { sound } from "@/lib/sound";
 import { stops } from "@/lib/stops";
 import { makeTraffic, stepTraffic, type Traffic as TrafficState, type Vehicle } from "@/lib/traffic";
 import { tuning } from "@/lib/tuning";
-import { nearestStop, OBSTACLES, SHORE_Z } from "@/lib/world";
+import { EDGE, nearestStop, OBSTACLES, SHORE_Z } from "@/lib/world";
 import type { Destination } from "../IslandExperience";
 import { Jeepney, type JeepneyParts } from "./Jeepney";
 import { Landmarks } from "./Landmarks";
@@ -23,6 +23,9 @@ import { FOCUS } from "./weather";
 
 const SKY = "#f6c9a1";
 const START: Car = { x: -11, z: 24, yaw: Math.PI, speed: 0, yawRate: 0 }; // on the street west of FashionHub, facing north up the town
+// The camera aims no further south than this, so at the south street less of what lies past the town comes into view
+// (the jeepney drives on below the middle of the screen).
+const FOCUS_SOUTH = EDGE - 8;
 const GIVE_UP_AFTER = 20; // seconds: an unreachable destination never leaves the jeepney circling (driving.check.ts uses the same)
 const focusPoint = new Vector3();
 /** A vehicle the jeepney has been holding up toots once before it pulls round. */
@@ -44,8 +47,9 @@ function Driver({ driving, traffic, destination, onNear, onArrive }: DriverProps
   const calm = useCalm();
   const camera = useThree((s) => s.camera);
   const gl = useThree((s) => s.gl);
-  // A portrait phone sees less of the island side to side, so the camera pulls back to compensate.
-  const pullBack = useThree((s) => MathUtils.clamp(1.2 / s.viewport.aspect, 1, 1.8));
+  // A portrait phone sees less of the town side to side, so the camera pulls back to compensate (less than it did on
+  // the island, 1.8: the whole camera is further back now, and more would shrink the jeepney too far).
+  const pullBack = useThree((s) => MathUtils.clamp(1.2 / s.viewport.aspect, 1, 1.5));
   const car = useRef<Car>(START);
   const focus = useRef(new Vector3(START.x, 0, START.z));
   const target = useMemo(() => new Vector3(), []);
@@ -126,7 +130,7 @@ function Driver({ driving, traffic, destination, onNear, onArrive }: DriverProps
     // Camera: aim a little ahead of the jeepney so you see where you're going. The easing
     // uses 1 - exp(-rate·dt) so it feels the same at 30, 60 or 144 fps.
     const lookAhead = calm.current ? 0 : tuning.lookAhead;
-    target.set(c.x + Math.sin(c.yaw) * c.speed * lookAhead, 0, c.z + Math.cos(c.yaw) * c.speed * lookAhead);
+    target.set(c.x + Math.sin(c.yaw) * c.speed * lookAhead, 0, Math.min(c.z + Math.cos(c.yaw) * c.speed * lookAhead, FOCUS_SOUTH));
     focus.current.lerp(target, calm.current ? 1 : 1 - Math.exp(-tuning.cameraFollow * dt));
     camera.position.copy(focus.current).add(offset.set(0, tuning.cameraHeight, tuning.cameraDistance).multiplyScalar(pullBack));
     camera.lookAt(focus.current);
@@ -138,7 +142,9 @@ function Driver({ driving, traffic, destination, onNear, onArrive }: DriverProps
     FOCUS.uFocusDepth.value = -focusPoint.z;
     focusPoint.set(c.x, 1, c.z).project(camera);
     FOCUS.uFocusPx.value.set(((focusPoint.x + 1) / 2) * buffer.x, ((focusPoint.y + 1) / 2) * buffer.y);
-    FOCUS.uFocusRadius.value = 0.2 * Math.max(buffer.y, buffer.x * 0.6);
+    // The circle is a fixed size in the world (tuning.fadeRadius metres), so it stays round the jeepney however far
+    // back the camera is: metres → pixels is depth-scaled, and projectionMatrix[5] is 1 / tan(half the vertical fov).
+    FOCUS.uFocusRadius.value = ((tuning.fadeRadius / FOCUS.uFocusDepth.value) * camera.projectionMatrix.elements[5] * buffer.y) / 2;
   });
 
   return <Jeepney ref={parts} />;

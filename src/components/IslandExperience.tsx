@@ -61,7 +61,7 @@ export function IslandExperience() {
   }, []);
   const goToStop = useCallback((id: string) => {
     const stop = stops.find((s) => s.id === id)!;
-    goTo({ ...parkingSpot(stop.angle), stopId: id });
+    goTo({ ...parkingSpot(stop.id), stopId: id });
     setStatus(`Driving to ${stop.name}. Its card opens when you arrive.`);
   }, [goTo]);
   const openStop = useCallback((id: string | null) => {

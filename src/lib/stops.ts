@@ -1,6 +1,6 @@
 export const UPWORK = "https://www.upwork.com/freelancers/ianquilatan";
 
-/** The six stops around the island. Each one is a real project (or the "about" pier). */
+/** The six stops in town. Each one is a real project (or the "about" terminal). Where each stands: `site()` in world.ts. */
 export type Stop = {
   id: string;
   name: string; // shown on the jeepney's route sign
@@ -12,8 +12,6 @@ export type Stop = {
   links: { label: string; href: string; primary?: boolean }[];
   /** Screenshot in public/shots, 1200 × 750. */
   shot?: string;
-  /** Where it sits on the island: angle in degrees around the centre (0 = towards the camera). */
-  angle: number;
 };
 
 export const stops: Stop[] = [
@@ -28,7 +26,6 @@ export const stops: Stop[] = [
       { label: "Live site", href: "https://product-listing-demo-ten.vercel.app/" },
       { label: "Code", href: "https://github.com/ianquilatanwe/product-listing-demo" },
     ],
-    angle: 130,
     shot: "/shots/fashionhub.jpg",
   },
   {
@@ -42,7 +39,6 @@ export const stops: Stop[] = [
       { label: "Live site", href: "https://landing-demo-rust-psi.vercel.app/" },
       { label: "Code", href: "https://github.com/ianquilatanwe/landing-demo" },
     ],
-    angle: 70,
     shot: "/shots/sprig.jpg",
   },
   {
@@ -56,7 +52,6 @@ export const stops: Stop[] = [
       { label: "Live site", href: "https://motion-demo-one.vercel.app/" },
       { label: "Code", href: "https://github.com/ianquilatanwe/motion-demo" },
     ],
-    angle: -125, // far side: a tall lighthouse on the camera side would hide the jeepney parked at it
     shot: "/shots/lumenfold.jpg",
   },
   {
@@ -70,7 +65,6 @@ export const stops: Stop[] = [
       { label: "Live site", href: "https://bagyo-three.vercel.app/" },
       { label: "Code", href: "https://github.com/ianquilatanwe/bagyo" },
     ],
-    angle: 180, // far side, straight behind the middle: the mast is tall
     shot: "/shots/bagyo.jpg",
   },
   {
@@ -84,7 +78,6 @@ export const stops: Stop[] = [
       { label: "Live web app", href: "https://recipe-finder-flutter.pages.dev/" },
       { label: "Code", href: "https://github.com/ianquilatanwe/recipe-finder-flutter" },
     ],
-    angle: -65,
     shot: "/shots/recipes.jpg",
   },
   {
@@ -98,7 +91,6 @@ export const stops: Stop[] = [
       { label: "Hire me on Upwork", href: UPWORK, primary: true },
       { label: "GitHub", href: "https://github.com/ianquilatanwe" },
     ],
-    angle: 10,
   },
 ];
 

@@ -29,6 +29,8 @@ export type Vec = [number, number, number];
  * Its shader also sways whatever was added inside `b.sway(...)`, draws each part's surface detail (surfaces.ts)
  * and the cloud shadows (weather.ts). */
 const VERTEX_PAINT = weathered(new MeshLambertMaterial({ vertexColors: true, flatShading: true }), { sway: true, surface: "vertex" });
+/** The same, for the town's buildings: it also dithers away whatever stands between the camera and the jeepney. */
+const VERTEX_PAINT_FADING = weathered(new MeshLambertMaterial({ vertexColors: true, flatShading: true }), { sway: true, surface: "vertex", fade: true });
 /** Soft shadows: black, with each vertex's alpha in its colour (dark in the middle, clear at the rim). */
 const SHADOW_PAINT = new MeshBasicMaterial({ color: "#000", vertexColors: true, transparent: true, depthWrite: false });
 
@@ -201,9 +203,9 @@ export class Batch {
 
 /**
  * Draws whatever `build` adds: one mesh for the parts, one for their shadows. Pass a module-level
- * function so it builds once. ao={false} for things that float.
+ * function so it builds once. ao={false} for things that float; fade for buildings that may hide the jeepney.
  */
-export function Batched({ build, ao = true }: { build: (b: Batch) => void; ao?: boolean }) {
+export function Batched({ build, ao = true, fade = false }: { build: (b: Batch) => void; ao?: boolean; fade?: boolean }) {
   const { solid, shadows } = useMemo(() => {
     const b = new Batch(ao);
     build(b);
@@ -211,7 +213,7 @@ export function Batched({ build, ao = true }: { build: (b: Batch) => void; ao?: 
   }, [build, ao]);
   return (
     <>
-      <mesh geometry={solid} material={VERTEX_PAINT} />
+      <mesh geometry={solid} material={fade ? VERTEX_PAINT_FADING : VERTEX_PAINT} />
       {shadows && <mesh geometry={shadows} material={SHADOW_PAINT} renderOrder={-1} />}
     </>
   );

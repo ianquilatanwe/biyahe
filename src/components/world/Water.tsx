@@ -3,15 +3,14 @@
 import { useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Color, ShaderMaterial, UniformsLib, UniformsUtils } from "three";
-import { ISLAND_RADIUS } from "@/lib/world";
+import { SHORE_Z } from "@/lib/world";
 import { useCalm } from "./useCalm";
 import { CLOUDS_GLSL, WIND } from "./weather";
 
 /**
  * The sea as one flat disc with a small shader, so it costs a single draw call:
- * turquoise shallows fading to deeper blue, a slow shimmer, and foam that hugs the
- * wobbly coastline (the same wobble() formula as world.ts) with thin lines rolling in, sun glints twinkling
- * on the ripples, and the same drifting cloud shadows as the land.
+ * turquoise shallows fading to deeper blue, a slow shimmer, and foam breaking against the seawall with thin
+ * lines rolling in, sun glints twinkling on the ripples, and the same drifting cloud shadows as the land.
  */
 const vertexShader = /* glsl */ `
   varying vec2 vXZ;
@@ -36,12 +35,10 @@ const fragmentShader = /* glsl */ `
   #include <fog_pars_fragment>
   ${CLOUDS_GLSL}
 
-  // Keep in step with wobble() in src/lib/world.ts.
-  float wobble(float a) { return sin(a * 3.0) * 0.9 + sin(a * 7.0 + 1.3) * 0.5; }
 
   void main() {
-    float a = atan(vXZ.y, vXZ.x);
-    float d = length(vXZ) - (uShore + wobble(a)); // metres out from the waterline
+    float a = vXZ.x * 0.2; // along the seawall
+    float d = uShore - vXZ.y; // metres out from the seawall (the sea is north, towards -z)
 
     vec3 col = mix(uShallow, uDeep, smoothstep(0.5, 16.0, d));
     // Slow shimmer. Multiplied, not added: adding could push a channel below zero, which the sRGB step turns into NaN blotches.
@@ -83,7 +80,7 @@ export function Water() {
           UniformsLib.fog,
           {
             uTime: { value: 0 },
-            uShore: { value: ISLAND_RADIUS + 0.9 }, // where the sloping sand meets the water (y = -0.6)
+            uShore: { value: SHORE_Z }, // the seawall's face
             uShallow: { value: new Color("#5cc9c4") },
             uDeep: { value: new Color("#2a86a3") },
             uFoam: { value: new Color("#f3fbf8") },

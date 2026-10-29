@@ -1,4 +1,4 @@
-import type { Material } from "three";
+import { Vector2, type Material } from "three";
 import { SURFACE_GLSL } from "./surfaces";
 
 /**
@@ -7,6 +7,24 @@ import { SURFACE_GLSL } from "./surfaces";
  * (palms, grass, flags). Both read one clock, WIND, which Landmarks advances (and freezes under reduced motion).
  */
 export const WIND = { value: 0 };
+
+/**
+ * Where the jeepney is on screen, updated every frame by the Driver: `uFocusPx` in drawing-buffer pixels, `uFocusDepth`
+ * its distance in front of the camera, `uFocusRadius` in pixels. Buildings nearer the camera than the jeepney are
+ * dithered away inside that circle, so it's never hidden behind them.
+ */
+export const FOCUS = { uFocusPx: { value: new Vector2(-1e4, -1e4) }, uFocusDepth: { value: 0 }, uFocusRadius: { value: 1 } };
+
+// Inside the circle round the jeepney, a fragment that's above the ground (not the sidewalk under it) and more than
+// 3 m nearer the camera than the jeepney is thrown away in a dither pattern, fading in towards the circle's edge.
+const FADE_GLSL = /* glsl */ `
+  if (vWorldY > 0.2 && vViewPosition.z < uFocusDepth - 3.0) {
+    float r = length(gl_FragCoord.xy - uFocusPx) / uFocusRadius;
+    float hide = 1.0 - smoothstep(0.65, 1.0, r);
+    float dither = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
+    if (dither < hide * 0.85) discard;
+  }
+`;
 
 /** Soft cloud shadows: blobs of value noise blown slowly across the island. Returns how lit a spot is (0.78 to 1). */
 export const CLOUDS_GLSL = /* glsl */ `
@@ -37,18 +55,23 @@ const SWAY_GLSL = /* glsl */ `
  * detail (surfaces.ts): `"vertex"` reads each part's own surface and coordinates (Batched), a number is one surface
  * laid out in world x/z (the ground). Returns the same material.
  */
-export function weathered<T extends Material>(material: T, { sway = false, surface }: { sway?: boolean; surface?: number | "vertex" } = {}) {
+export function weathered<T extends Material>(
+  material: T,
+  { sway = false, surface, fade = false }: { sway?: boolean; surface?: number | "vertex"; fade?: boolean } = {},
+) {
   const perVertex = surface === "vertex";
   // Which surface, and where on it: the part's own coordinates, or the ground's world x/z.
   const shade = surface === undefined ? "" : perVertex ? "surfaceShade(vSurf.z, vSurf.xy)" : `surfaceShade(${surface.toFixed(1)}, vCloudXZ)`;
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uWind = WIND;
+    if (fade) Object.assign(shader.uniforms, FOCUS);
     shader.vertexShader = shader.vertexShader
       .replace(
         "#include <common>",
         `#include <common>
         uniform float uWind;
         varying vec2 vCloudXZ;
+        ${fade ? "varying float vWorldY;" : ""}
         ${sway ? "attribute float sway;" : ""}
         ${perVertex ? "attribute vec3 surface; varying vec3 vSurf;" : ""}`,
       )
@@ -58,7 +81,12 @@ export function weathered<T extends Material>(material: T, { sway = false, surfa
         ${sway ? SWAY_GLSL : ""}
         ${perVertex ? "vSurf = surface;" : ""}`,
       )
-      .replace("#include <project_vertex>", "#include <project_vertex>\nvCloudXZ = (modelMatrix * vec4(transformed, 1.0)).xz;");
+      .replace(
+        "#include <project_vertex>",
+        `#include <project_vertex>
+        vCloudXZ = (modelMatrix * vec4(transformed, 1.0)).xz;
+        ${fade ? "vWorldY = (modelMatrix * vec4(transformed, 1.0)).y;" : ""}`,
+      );
     shader.fragmentShader = shader.fragmentShader
       .replace(
         "#include <common>",
@@ -66,12 +94,14 @@ export function weathered<T extends Material>(material: T, { sway = false, surfa
         uniform float uWind;
         varying vec2 vCloudXZ;
         ${perVertex ? "varying vec3 vSurf;" : ""}
+        ${fade ? "varying float vWorldY; uniform vec2 uFocusPx; uniform float uFocusDepth; uniform float uFocusRadius;" : ""}
         ${CLOUDS_GLSL}
         ${shade ? SURFACE_GLSL : ""}`,
       )
+      .replace("#include <clipping_planes_fragment>", `#include <clipping_planes_fragment>\n${fade ? FADE_GLSL : ""}`)
       .replace("#include <color_fragment>", `#include <color_fragment>\n${shade ? `diffuseColor.rgb *= ${shade};` : ""}`)
       .replace("#include <dithering_fragment>", "#include <dithering_fragment>\ngl_FragColor.rgb *= clouds(vCloudXZ);");
   };
-  material.customProgramCacheKey = () => `weather-${sway}-${surface}`;
+  material.customProgramCacheKey = () => `weather-${sway}-${surface}-${fade}`;
   return material;
 }

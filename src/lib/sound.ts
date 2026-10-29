@@ -4,9 +4,9 @@
 // Nothing is made until the visitor clicks, taps or presses a key (browsers only allow audio after that).
 // Nothing here touches the page or the 3D scene: callers pass numbers in, so it stays easy to test by ear.
 
-// Speeds (units/s) where each gear starts and tops out. Top speed is 12.
-const GEAR_BOTTOM = [0, 3.5, 7.5];
-const GEAR_TOP = [4.5, 8.5, 12];
+// Speeds (units/s) where each gear starts and tops out. Top speed is tuning.maxForward (15).
+const GEAR_BOTTOM = [0, 4.5, 9.5];
+const GEAR_TOP = [5.5, 10.5, 15];
 
 function createSound() {
   let ctx: AudioContext | null = null;
@@ -125,7 +125,7 @@ function createSound() {
       ease(engine.gain, 0.12 + 0.03 * revs + 0.05 * throttle);
       ease(subGain.gain, 0.3 * moving * (0.5 + 0.5 * throttle));
       ease(exhaust.gain, moving * (0.05 + 0.16 * throttle));
-      ease(road.gain, 0.09 * Math.min(v / 12, 1));
+      ease(road.gain, 0.09 * Math.min(v / 15, 1));
       ease(sea.gain, 0.05 + 0.3 * shore * shore);
       ease(seaPan.pan, Math.max(-1, Math.min(1, pan)) * 0.8);
     },

@@ -3,24 +3,27 @@
 import { useMemo, useRef, useState, type RefObject } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { PerformanceMonitor } from "@react-three/drei";
-import { MathUtils, Vector3 } from "three";
+import { MathUtils, Vector2, Vector3 } from "three";
 import { autopilot, NO_INPUT, step, type Car } from "@/lib/driving";
 import { sound } from "@/lib/sound";
 import { stops } from "@/lib/stops";
 import { tuning } from "@/lib/tuning";
-import { coastRadius, nearestStop, OBSTACLES } from "@/lib/world";
+import { nearestStop, OBSTACLES, SHORE_Z } from "@/lib/world";
 import type { Destination } from "../IslandExperience";
-import { Island } from "./Island";
 import { Jeepney, type JeepneyParts } from "./Jeepney";
 import { Landmarks } from "./Landmarks";
 import { StopSigns } from "./StopSigns";
 import { TapMarker } from "./TapMarker";
+import { Town } from "./Town";
 import { useCalm } from "./useCalm";
 import { useKeys } from "./useKeys";
+import { FOCUS } from "./weather";
 
 const SKY = "#f6c9a1";
-const START: Car = { x: 0, z: 2, yaw: Math.PI, speed: 0, yawRate: 0 }; // on the terminal pad, facing away from the camera
-const GIVE_UP_AFTER = 12; // seconds: an unreachable destination never leaves the jeepney circling
+const START: Car = { x: -11, z: 24, yaw: Math.PI, speed: 0, yawRate: 0 }; // on the street west of FashionHub, facing north up the town
+const GIVE_UP_AFTER = 20; // seconds: an unreachable destination never leaves the jeepney circling (driving.check.ts uses the same)
+const focusPoint = new Vector3();
+const buffer = new Vector2();
 
 type DriverProps = {
   driving: boolean;
@@ -35,6 +38,7 @@ function Driver({ driving, destination, onNear, onArrive }: DriverProps) {
   const keys = useKeys(driving);
   const calm = useCalm();
   const camera = useThree((s) => s.camera);
+  const gl = useThree((s) => s.gl);
   // A portrait phone sees less of the island side to side, so the camera pulls back to compensate.
   const pullBack = useThree((s) => MathUtils.clamp(1.2 / s.viewport.aspect, 1, 1.8));
   const car = useRef<Car>(START);
@@ -83,10 +87,9 @@ function Driver({ driving, destination, onNear, onArrive }: DriverProps) {
 
     const c = (car.current = step(car.current, input, dt, OBSTACLES));
 
-    // Sound: the engine follows speed and throttle; the sea gets louder near the water, on the side the water is.
-    const r = Math.hypot(c.x, c.z);
-    const toWater = coastRadius(Math.atan2(c.z, c.x)) - r;
-    sound.update(c.speed, input.throttle ? 1 : 0, 1 - Math.min(toWater / 14, 1), r ? c.x / r : 0);
+    // Sound: the engine follows speed and throttle; the sea gets louder towards the bay (ahead, so no panning).
+    const toWater = c.z - SHORE_Z - 4; // 0 on the bay boulevard's kerb
+    sound.update(c.speed, input.throttle ? 1 : 0, 1 - Math.min(toWater / 16, 1), 0);
 
     // Tell the page which stop is in range, only when it changes (a React update, not every frame).
     const id = nearestStop(c.x, c.z, stops)?.id ?? null;
@@ -119,6 +122,15 @@ function Driver({ driving, destination, onNear, onArrive }: DriverProps) {
     focus.current.lerp(target, calm.current ? 1 : 1 - Math.exp(-tuning.cameraFollow * dt));
     camera.position.copy(focus.current).add(offset.set(0, tuning.cameraHeight, tuning.cameraDistance).multiplyScalar(pullBack));
     camera.lookAt(focus.current);
+
+    // Tell the buildings' shader where the jeepney is on screen, so whatever stands in front of it fades out.
+    camera.updateMatrixWorld();
+    gl.getDrawingBufferSize(buffer);
+    focusPoint.set(c.x, 1, c.z).applyMatrix4(camera.matrixWorldInverse);
+    FOCUS.uFocusDepth.value = -focusPoint.z;
+    focusPoint.set(c.x, 1, c.z).project(camera);
+    FOCUS.uFocusPx.value.set(((focusPoint.x + 1) / 2) * buffer.x, ((focusPoint.y + 1) / 2) * buffer.y);
+    FOCUS.uFocusRadius.value = 0.2 * Math.max(buffer.y, buffer.x * 0.6);
   });
 
   return <Jeepney ref={parts} />;
@@ -161,7 +173,7 @@ export default function World({ active, onGoTo, onGoToStop, nearId, onOpen, onRe
           Kept near-white: strongly tinted light multiplies into every colour and turned the sand orange. */}
       <hemisphereLight args={["#f3f6ff", "#6f9a62", 1.25]} />
       <directionalLight position={[-26, 22, 14]} intensity={2.25} color="#ffe9cc" />
-      <Island onGround={onGoTo} />
+      <Town onGround={onGoTo} />
       <Landmarks onStop={onGoToStop} />
       <Driver {...driver} />
       <TapMarker destination={driver.destination} />

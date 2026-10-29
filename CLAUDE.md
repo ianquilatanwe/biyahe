@@ -1,6 +1,7 @@
 # Biyahe: coding principles
 
-Ian's 3D portfolio home: drive a jeepney around an island to six project stops.
+Ian's 3D portfolio home: drive a jeepney round a small town by the bay to six project stops. On `main` it is still the
+island (live); the town is being built on the `town` branch in four phases (plan: `docs/town-plan.html`).
 Next.js 15 + React 19 + three 0.186 + @react-three/fiber 9.8 + drei 10.7. Ian doesn't model:
 everything is built from code primitives (Ian chose code over Blender for the jeepney on 2026-10-28). Distilled from the `threejs-react-three-fiber`,
 `threejs-performance`, `camera-systems` and `codebase-design` skills; load them for detail.
@@ -10,9 +11,10 @@ everything is built from code primitives (Ian chose code over Blender for the je
   (driving, shoreline, stop positions, proximity, tap-to-go targets) is a pure function in `src/lib`
   with no three.js or React, and has a `*.check.ts` beside it (`node src/lib/<name>.check.ts`).
   Components only draw and wire input.
-- **One source of truth for layout:** island sizes, `wobble()`, `stopPosition()` and the landmark colliders
-  (`FOOTPRINTS` → `LANDMARKS`) live in `src/lib/world.ts`. Change a model in `Landmarks.tsx`, change its footprint
-  too, then run the check (its autopilot sweep uses the real stops and colliders).
+- **One source of truth for layout:** the street grid (`STREETS`, `BLOCKS`, `EDGE`, `SHORE_Z`), the block colliders
+  (`BLOCK_BOXES`), each stop's `site()` (block + the side it faces → kerb front, model origin, yaw, parking spot) and
+  the sign/click circles (`FOOTPRINTS` → `LANDMARKS`) live in `src/lib/world.ts`. Change a model in `Landmarks.tsx`,
+  change its footprint too, then run the check (it drives the real town).
   The drawing and the logic both import them, so what you see is where things collide.
 - **Content in `src/lib/stops.ts`.** The 3D stops and the HTML project list read the same data.
 
@@ -44,8 +46,8 @@ everything is built from code primitives (Ian chose code over Blender for the je
 - Use `paint(color)` for the few separate low-poly meshes (wheels, ground): one shared Lambert material per colour.
 - **Static parts go through `Batched`** (`components/world/Batched.tsx`): a build function adds boxes, cylinders,
   rocks and extruded side-view outlines (`sideways()` in `Jeepney.tsx`: curved fenders, wheel arches), and they're
-  merged into ONE mesh with the colour in each vertex. The whole island (6 landmarks, palms, props, tufts) and the
-  jeepney body cost 2 draw calls each this way (parts + shadows); the whole frame is ~30. Only animated, unlit,
+  merged into ONE mesh with the colour in each vertex. The town's buildings (`Town.tsx`), the stops and their props
+  (`Landmarks.tsx`) and the jeepney body cost 2 draw calls each this way (parts + shadows); the whole frame is ~27. Only animated, unlit,
   textured (the jeepney's side art) or clickable ground parts (the road ring) are separate meshes.
 - **Detail lives in Batch's helpers**, so every model gets it: `box` bevels its edges (RoundedBoxGeometry, 1 segment;
   bars under 3 cm stay plain), `cyl`/`cone` double the sides they're given (3–4-sided shapes like flags stay), balls are
@@ -55,11 +57,13 @@ everything is built from code primitives (Ian chose code over Blender for the je
   (court lines, slabs) go inside `b.flat(...)`, floating things use `<Batched ao={false}>`, or they turn grey.
 - Soft shadows: `b.shadow(at, size, height)` inside a build adds a blurred disc, offset away from the sun; all of a
   batch's shadows are one transparent mesh. Moving things use `<SoftShadow>`.
-- Props the jeepney should bump into go in `PROPS` (world.ts); driving, taps and the check use `OBSTACLES`
-  (landmarks + props). `LANDMARKS` stays index-aligned with `stops`.
+- The jeepney bumps into `OBSTACLES` (world.ts): the block rectangles, kerb to kerb. Props on sidewalks sit inside a
+  block, so the kerb covers them; anything standing in a street needs its own circle there. `LANDMARKS` (sign and click
+  anchors, not colliders) stays index-aligned with `stops`.
 - Click areas are invisible meshes (`<meshBasicMaterial visible={false} />`): raycast, but no draw call.
-- Tall things go on the far side of the island (angles near ±180): the camera looks from +z, so a tall
-  landmark on the near side hides the jeepney parked at it.
+- The camera always looks north (towards -z). Stops face south or sideways (a north-facing shop is only seen from
+  behind), tall things go in the north row, and the south row stays low. Whatever still stands between the camera and
+  the jeepney is dithered away by `fade` on `Batched` (`FOCUS` in weather.ts, set by the Driver each frame).
 - **Weather lives in the shaders** (`weather.ts`): `weathered(material)` adds cloud shadows to a built-in material;
   `VERTEX_PAINT` also sways what a build adds inside `b.sway(k, power, fn)` (k · distance^power from the current frame's
   origin: a palm's foot, a flag's hoist). All of it, plus the sea and the beam's dust, runs on one clock, `WIND`,
@@ -73,11 +77,11 @@ everything is built from code primitives (Ian chose code over Blender for the je
 - The sky is never in frame (the camera looks ~31° down; the sea fills the top of the screen), so "sky" effects
   have to land on the ground or the water.
 - In shaders, vary colour by multiplying, not adding: a channel pushed below zero turns into NaN blotches
-  after the sRGB step. The sea's foam uses the same `wobble()` formula as `world.ts`; keep them in step.
+  after the sRGB step. The sea's foam breaks along the seawall at `SHORE_Z`.
 - No real-time shadows: fake soft shadows with a dark transparent disc.
 - Measure with `renderer.info.render.calls` before optimising; merge or instance static props when
-  the count climbs (target under ~150 draw calls on the whole island).
-- No new texture or model files unless they're small (whole island under 1 MB of assets).
+  the count climbs (town budget: ≤ 60 draw calls, ≤ 400k triangles; phase 1 is 27 and ~177k).
+- No new texture or model files unless they're small (whole scene under 1 MB of assets).
 
 ## The HTML layer (signboard style)
 - Every HTML piece is jeepney signage: `sign` (yellow plate, ink rim, ink ledge it presses into), `sign-red` (the one
@@ -88,11 +92,12 @@ everything is built from code primitives (Ian chose code over Blender for the je
 - In-world signs (`StopSigns`) are drei `<Html>` with an explicit `portal`: without it `<Html>` follows fiber's event
   target, which changes after the first render, and the first sign came up empty. Layers: signs z 1–8, loader z 9,
   controls z 10, header z 20.
-- Taps and stop trips show `TapMarker` chevrons; the autopilot plans round landmarks with `aimPoint` (tangent points).
-  `driving.check.ts` runs 500 seeded random taps and fails if fewer than 97% arrive or the slowest 5% exceed 6.5 s,
-  plus trips from right beside each landmark to its far side (98% must arrive).
-  Every landmark's back (the strip to the sea) is too narrow to drive: `aimPoint` never plans round it, and a tap in
-  its shadow parks in front. Bumps only cost the head-on part of the speed, so a jeepney sliding along a wall can still steer.
+- Taps and stop trips show `TapMarker` chevrons. The autopilot follows the streets: `route()` takes the shortest way
+  through the 16 intersections (`CROSSINGS`) and aims at the furthest point on it in plain sight (`clearLine`), braking
+  for the corner after it. A tap on a building or sidewalk drives to the street in front (`reachable`).
+  `driving.check.ts` runs 200 awkward stop trips, 500 seeded random taps (97% must arrive, 95% within 12 s) and trips
+  starting pressed against every kerb (98%). Trips give up after 20 s (`GIVE_UP_AFTER`, same in the check).
+  Bumps only cost the head-on part of the speed, so a jeepney sliding along a wall can still steer.
 - The card's close button fills the red strip's height and sits by the dialog's edge, which clips anything outside it:
   its focus ring is drawn inside the button (yellow, inset), not the page's outer ring plus halo.
 - In-world sign tails keep their base flat on the plate edge and lean only the tip (CSS skew); rotating the whole

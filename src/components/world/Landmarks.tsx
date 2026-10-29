@@ -4,7 +4,7 @@ import { useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { AdditiveBlending, CanvasTexture, ConeGeometry, DoubleSide, ShaderMaterial, Vector3, type Group, type SpriteMaterial } from "three";
 import { stops } from "@/lib/stops";
-import { coastRadius, GRASS_RADIUS, LANDMARKS, OBSTACLES, SHED, stopPosition } from "@/lib/world";
+import { LANDMARKS, SHORE_Z, site } from "@/lib/world";
 import { Batched, type Batch, type Vec } from "./Batched";
 import { useCalm } from "./useCalm";
 import { WIND } from "./weather";
@@ -39,7 +39,6 @@ const GRASS_TUFT = "#73b357";
 const LINE = "#fbf6ea";
 const FLAGS = [RED, YELLOW, BLUE, WHITE, TEAL, ORANGE];
 
-const rad = (deg: number) => (deg * Math.PI) / 180;
 
 /** Where the weather station's mast stands in its landmark frame, and how tall it is (the cups spin on top). */
 const MAST: Vec = [0.5, 0, -1.9];
@@ -179,18 +178,16 @@ const LANDMARK_MODELS: Record<string, (b: Batch) => void> = {
     banderitas(b, [-1.6, 2.15, -0.28], [1.6, 2.15, -0.28], 0.35); // fiesta flags along the front
   },
 
-  // About: a pier running out over the water from a gate with a sign. The bangka is drawn separately (it bobs).
+  // About: the jeepney terminal facing the plaza (a phase-1 stand-in): a long shed roof on posts over a queue, route
+  // boards hanging under it, rails and a bench. Its yard runs back to the bay; the pier is across the boulevard (pier() below).
   about(b) {
-    b.shadow([0, -0.6], [1.6, 0.5], 1.9);
-    for (const x of [-1.1, 1.1]) b.box(WOOD_DARK, [0.18, 1.9, 0.18], [x, 0.95, -0.6]);
-    b.box(BLUE, [2.6, 0.4, 0.1], [0, 1.95, -0.6]);
-    b.box(YELLOW, [2.2, 0.08, 0.11], [0, 1.95, -0.6]);
-    for (let z = -1.0; z > -15; z -= 0.42) b.box(WOOD, [2.0, 0.1, 0.34], [0, 0.25, z]);
-    for (let z = -2; z >= -15; z -= 2.2) for (const x of [-0.95, 0.95]) b.cyl(WOOD_DARK, [0.1, 0.1, 1.8], [x, -0.6, z], undefined, 6);
-    for (const x of [-0.8, 0.8]) b.cyl(DARK, [0.1, 0.12, 0.3], [x, 0.45, -14.6], undefined, 6); // bollards
-    b.box(WOOD, [0.5, 0.4, 0.5], [1.5, 0.2, 0.2]); // crates by the gate
-    b.box(WOOD_DARK, [0.4, 0.35, 0.4], [1.55, 0.58, 0.2], [0, 0.4, 0]);
-    banderitas(b, [-1.1, 2.1, -0.6], [1.1, 2.1, -0.6], 0.25, 6);
+    b.shadow([0, -2.5], [4.6, 2.6], 3);
+    for (const x of [-4, -1.3, 1.3, 4]) for (const z of [-0.6, -4.4]) b.box(STEEL, [0.14, 3.2, 0.14], [x, 1.6, z]);
+    b.box(BLUE, [9.6, 0.12, 5.6], [0, 3.25, -2.5], [0.08, 0, 0]);
+    for (const x of [-2.6, 0, 2.6]) b.box(YELLOW, [2, 0.4, 0.06], [x, 2.6, -0.6]);
+    for (const z of [-1.8, -3]) b.box(STEEL, [6, 0.05, 0.05], [0, 0.9, z]);
+    b.box(CONCRETE, [6, 0.1, 0.5], [0, 0.45, -4]);
+    banderitas(b, [-4, 3.0, -0.55], [4, 3.0, -0.55], 0.3, 12);
   },
 };
 
@@ -273,16 +270,14 @@ function court(b: Batch) {
   });
 }
 
-/** Low tufts of grass and a few flowers scattered over the grass (seeded, so the same every visit). */
+/** Low tufts of grass and a few flowers on the plaza lawn, off the paths and the fountain (seeded, so the same every visit). */
 function tufts(b: Batch) {
   let seed = 11;
   const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   for (let i = 0; i < 70; i++) {
-    const a = rnd() * Math.PI * 2;
-    const r = 5 + rnd() * (GRASS_RADIUS - 6.5);
-    if (r > 12.8 && r < 16) continue; // keep the road clear
-    const at: Vec = [Math.sin(a) * r, 0, Math.cos(a) * r];
-    if (OBSTACLES.some((o) => Math.hypot(o.x - at[0], o.z - at[2]) < o.r + 0.5)) continue;
+    const at: Vec = [(rnd() * 2 - 1) * 6, 0.03, (rnd() * 2 - 1) * 6];
+    const underShed = at[0] > -4.4 && at[0] < -0.9 && at[2] > 4;
+    if (Math.abs(at[0]) < 1.1 || Math.abs(at[2]) < 1.1 || Math.hypot(at[0], at[2]) < 3.3 || underShed) continue;
     // Three thin blades leaning apart.
     b.place(at, rnd() * 6, () => b.sway(0.4, 2, () => {
       for (let k = 0; k < 3; k++) b.cone(GRASS_TUFT, 0.045, 0.3, [Math.sin(k * 2.1) * 0.06, 0.13, Math.cos(k * 2.1) * 0.06], [Math.cos(k * 2.1) * 0.35, 0, -Math.sin(k * 2.1) * 0.35], 3);
@@ -291,17 +286,25 @@ function tufts(b: Batch) {
   }
 }
 
-/** Where a stop's model sits and which way it faces (+z towards the island's middle). */
-function frameOf(angle: number) {
-  const { x, z } = stopPosition(angle);
-  return { at: [x, 0, z] as [number, number, number], yaw: rad(angle) + Math.PI };
+/** Where a stop's model sits and which way it faces (+z towards its street). */
+function frameOf(id: string) {
+  const { origin, yaw } = site(id);
+  return { at: [origin.x, 0, origin.z] as Vec, yaw };
 }
 
-/** A point on the sand just above the waterline, at a stop-style angle (degrees, 0 towards the camera). */
-function onSand(angle: number, inset: number) {
-  const a = rad(angle);
-  const r = coastRadius(Math.atan2(Math.cos(a), Math.sin(a))) - inset;
-  return [Math.sin(a) * r, 0, Math.cos(a) * r] as [number, number, number];
+/** The pier: out over the water from a gate with a sign on the promenade, facing north (-z). The bangka is drawn separately (it bobs). */
+const PIER: Vec = [0, 0, SHORE_Z + 0.6];
+function pier(b: Batch) {
+  b.shadow([0, -0.6], [1.6, 0.5], 1.9);
+  for (const x of [-1.1, 1.1]) b.box(WOOD_DARK, [0.18, 1.9, 0.18], [x, 0.95, -0.6]);
+  b.box(BLUE, [2.6, 0.4, 0.1], [0, 1.95, -0.6]);
+  b.box(YELLOW, [2.2, 0.08, 0.11], [0, 1.95, -0.6]);
+  for (let z = -1.0; z > -15; z -= 0.42) b.box(WOOD, [2.0, 0.1, 0.34], [0, 0.25, z]);
+  for (let z = -2; z >= -15; z -= 2.2) for (const x of [-0.95, 0.95]) b.cyl(WOOD_DARK, [0.1, 0.1, 1.8], [x, -0.6, z], undefined, 6);
+  for (const x of [-0.8, 0.8]) b.cyl(DARK, [0.1, 0.12, 0.3], [x, 0.45, -14.6], undefined, 6); // bollards
+  b.box(WOOD, [0.5, 0.4, 0.5], [1.5, 0.2, 0.2]); // crates by the gate
+  b.box(WOOD_DARK, [0.4, 0.35, 0.4], [1.55, 0.58, 0.2], [0, 0.4, 0]);
+  banderitas(b, [-1.1, 2.1, -0.6], [1.1, 2.1, -0.6], 0.25, 6);
 }
 
 /**
@@ -323,10 +326,10 @@ function frond(b: Batch, color: string) {
   }
 }
 
-/** A coconut palm: a curved trunk leaning out to sea, six drooping fronds and a few coconuts. */
-function palm(b: Batch, angle: number, inset: number, height: number) {
+/** A coconut palm at `at`: a curved trunk leaning towards `lean` (radians, like yaw), six drooping fronds and a few coconuts. */
+function palm(b: Batch, at: Vec, height: number, lean: number) {
   // The crown sways ~12 cm in the wind, the foot not at all (k · height², from the palm's foot).
-  b.place(onSand(angle, inset), rad(angle) - Math.PI / 2, () => b.sway(0.12 / (height * height), 2, () => {
+  b.place(at, lean - Math.PI / 2, () => b.sway(0.12 / (height * height), 2, () => {
     let x = 0;
     let y = 0;
     const segments = 5;
@@ -346,25 +349,24 @@ function palm(b: Batch, angle: number, inset: number, height: number) {
   }));
 }
 
-/** Everything that never moves, merged into one mesh per colour. */
+/** Everything around the stops that never moves, merged into one mesh. */
 function buildScenery(b: Batch) {
   for (const s of stops) {
-    const { at, yaw } = frameOf(s.angle);
+    const { at, yaw } = frameOf(s.id);
     b.place(at, yaw, () => LANDMARK_MODELS[s.id](b));
   }
-  // Palms along the beach, kept clear of the stops.
-  [
-    [35, 1.2, 4.2], [52, 1.6, 3.6], [112, 1.3, 4.4], [150, 1.8, 3.4], [158, 1.2, 4.0], [-160, 1.5, 3.8],
-    [-110, 1.3, 4.3], [-82, 1.7, 3.5], [-40, 1.2, 4.0], [-22, 1.6, 3.4], [96, 1.4, 3.8], [-4, 1.5, 3.6],
-  ].forEach(([angle, inset, height]) => palm(b, angle, inset, height));
-  // Rocks at the waterline and out in the shallows.
-  [
-    [24, -1.0, 0.7], [62, -2.5, 0.5], [140, -1.2, 0.8], [-58, -2.0, 0.6], [-120, -1.0, 0.9], [-178, -3.0, 0.5], [100, -4.0, 0.6], [-10, -3.5, 0.45],
-  ].forEach(([angle, inset, size], i) => {
-    b.rock(i % 2 ? ROCK : ROCK_DARK, size, [...onSand(angle, inset)].map((v, k) => (k === 1 ? -0.45 : v)) as [number, number, number], [i, i * 2, 0], [1.2, 0.7, 1]);
-  });
-  // A basketball hoop on the beach: every barangay has one.
-  b.place(onSand(43, 2.2), rad(43) + Math.PI, () => {
+  b.place(PIER, 0, () => pier(b));
+  // Palms along the promenade, leaning out over the bay, clear of the pier.
+  for (let x = -66; x <= 66; x += 8.5) if (Math.abs(x) > 4) palm(b, [x + Math.sin(x) * 1.2, 0, SHORE_Z + 1.8], 3.6 + (Math.abs(x * 7) % 1.1), Math.PI);
+  // Rocks at the foot of the seawall.
+  for (const [x, size] of [[-31, 0.8], [-12, 0.6], [9, 0.9], [27, 0.6], [44, 0.8], [-50, 0.7]]) {
+    b.rock(x % 2 ? ROCK : ROCK_DARK, size, [x, -0.5, SHORE_Z - 1.6], [x, x * 2, 0], [1.2, 0.7, 1]);
+  }
+  // Four shade trees at the plaza's corners (palms until phase 2).
+  for (const [x, z] of [[-4.5, -4.5], [4.5, -4.5], [-4.5, 4.5], [4.5, 4.5]]) palm(b, [x, 0.03, z], 3.8, Math.atan2(x, z));
+  tufts(b);
+  // The basketball court in the south-east block, its hoop at the north end.
+  b.place([22, 0, 19.5], 0, () => {
     court(b);
     b.shadow([0, -0.3], [0.9, 0.5], 2.5);
     b.cyl(STEEL, [0.07, 0.07, 3.0], [0, 1.5, -0.5], undefined, 6);
@@ -372,10 +374,8 @@ function buildScenery(b: Batch) {
     b.box(RED, [0.4, 0.3, 0.07], [0, 2.85, -0.24]);
     b.cyl(ORANGE, [0.25, 0.25, 0.04], [0, 2.7, 0.05], undefined, 10);
   });
-  // The waiting shed on the far side: a collider too (SHED in world.ts), so the jeepney bumps it.
-  const shed = stopPosition(SHED.angle, SHED.radius);
-  b.place([shed.x, 0, shed.z], rad(SHED.angle) + Math.PI, () => waitingShed(b));
-  tufts(b);
+  // A waiting shed on the plaza's south edge, facing the street, its tricycle parked in front inside the kerb.
+  b.place([-2.7, 0.03, 5.1], 0, () => waitingShed(b));
 }
 
 /** The outrigger boat moored by the pier, built once and bobbed as a whole. */
@@ -389,10 +389,9 @@ function buildBangka(b: Batch) {
   for (const z of [-0.9, 0.9]) b.cyl(BAMBOO, [0.05, 0.05, 3.9], [0, 0.3, z], [0, 0, Math.PI / 2], 6);
 }
 
-const lighthouse = frameOf(stops.find((s) => s.id === "lumenfold")!.angle);
-const pier = frameOf(stops.find((s) => s.id === "about")!.angle);
+const lighthouse = frameOf("lumenfold");
 
-const station = frameOf(stops.find((s) => s.id === "bagyo")!.angle);
+const station = frameOf("bagyo");
 
 /** The wind cups on top of the weather mast: three arms, a cup on each, turned to catch the wind. */
 function buildCups(b: Batch) {
@@ -494,7 +493,7 @@ export function Landmarks({ onStop }: { onStop: (id: string) => void }) {
 
   return (
     <group>
-      <Batched build={buildScenery} />
+      <Batched build={buildScenery} fade />
 
       {/* Click areas: invisible (no draw call) cylinders over each landmark's footprint. */}
       {stops.map((s, i) => (
@@ -508,7 +507,7 @@ export function Landmarks({ onStop }: { onStop: (id: string) => void }) {
           onPointerOver={setCursor("var(--cursor-go)")}
           onPointerOut={setCursor("")}
         >
-          <cylinderGeometry args={[LANDMARKS[i].r, LANDMARKS[i].r, s.id === "lumenfold" || s.id === "bagyo" ? 16 : 3, 8]} />
+          <cylinderGeometry args={[LANDMARKS[i].r, LANDMARKS[i].r, s.id === "lumenfold" || s.id === "bagyo" ? 16 : 4, 8]} />
           <meshBasicMaterial visible={false} />
         </mesh>
       ))}
@@ -537,7 +536,7 @@ export function Landmarks({ onStop }: { onStop: (id: string) => void }) {
       </group>
 
       {/* The bangka, moored beside the end of the pier, rocking on the water. */}
-      <group position={pier.at} rotation-y={pier.yaw}>
+      <group position={PIER}>
         <group position={[2.6, -0.55, -11.5]}>
           <group ref={boat}>
             <Batched build={buildBangka} ao={false} />

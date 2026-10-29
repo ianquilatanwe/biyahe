@@ -1,75 +1,103 @@
 /**
- * The island's layout rules, shared by the drawing (Island.tsx) and the logic (driving,
- * proximity, tap-to-drive). Angles are world angles: atan2(z, x).
+ * The town's layout rules, shared by the drawing (Town.tsx, Landmarks.tsx) and the logic (driving,
+ * proximity, tap-to-drive). x runs east, z runs south (towards the camera); the bay is to the north.
+ *
+ * A 3 × 3 grid of blocks with 8 m streets between and around them. The outer streets are the edge of the
+ * drivable square; the northern one is the bay boulevard, with the promenade and the seawall beyond it.
  */
 import { stops } from "./stops.ts";
 
 export type Point = { x: number; z: number };
 export type Circle = Point & { r: number };
+/** An axis-aligned rectangle: centre and half sizes. Blocks are these. */
+export type Box = Point & { hx: number; hz: number };
+export type Obstacle = Circle | Box;
 
-export const ISLAND_RADIUS = 27; // sand edge before the wobble
-export const GRASS_RADIUS = 21.5;
-export const STOP_RADIUS = 19; // landmarks sit on this ring
-export const OPEN_RADIUS = 7; // how close to a landmark the "Open" prompt appears
+/** Street centre lines, the same both ways: x for north–south streets, z for east–west ones. */
+export const STREETS = [-33, -11, 11, 33];
+export const STREET_HALF = 4; // half a street's width, kerb to kerb
+/** Block centres, both ways. A block is kerb to kerb, sidewalks included. */
+export const BLOCKS = [-22, 0, 22];
+export const BLOCK_HALF = 7;
+/** The drivable square: the outer streets' outer kerbs. */
+export const EDGE = 37;
+/** The seawall: the promenade runs from the boulevard's kerb (z = -EDGE) to here, the sea is north of it. */
+export const SHORE_Z = -41;
+export const OPEN_RADIUS = 7; // how close to a stop's shopfront the "Open" prompt appears
 
-/** Same "random" every load, so the coastline never changes shape between visits. */
-export function wobble(angle: number) {
-  return Math.sin(angle * 3) * 0.9 + Math.sin(angle * 7 + 1.3) * 0.5;
-}
+/** The blocks as colliders. The jeepney drives on the streets; the kerb is the wall. */
+export const BLOCK_BOXES: Box[] = BLOCKS.flatMap((z) => BLOCKS.map((x) => ({ x, z, hx: BLOCK_HALF, hz: BLOCK_HALF })));
 
-/** Distance from the centre to the water's edge in this direction. */
-export function coastRadius(angle: number) {
-  return ISLAND_RADIUS + wobble(angle);
-}
+/** Every street intersection: the autopilot's road map. */
+export const CROSSINGS: Point[] = STREETS.flatMap((z) => STREETS.map((x) => ({ x, z })));
 
-/** Where a stop's landmark sits. Its angle is in degrees, 0 = towards the camera (+z). */
-export function stopPosition(angleDegrees: number, radius = STOP_RADIUS): Point {
-  const a = (angleDegrees * Math.PI) / 180;
-  return { x: Math.sin(a) * radius, z: Math.cos(a) * radius };
-}
+type Face = "n" | "s" | "e" | "w";
+const FACING: Record<Face, Point> = { n: { x: 0, z: -1 }, s: { x: 0, z: 1 }, e: { x: 1, z: 0 }, w: { x: -1, z: 0 } };
 
 /**
- * Each landmark's footprint as a circle the jeepney bumps into: `out` is how far its centre sits past the
- * stop ring towards the sea, `r` its radius. Keep in step with the models in Landmarks.tsx.
- * Rule of thumb: out + 4.5 (parking distance) - r must stay above 1.3 (the jeepney) + 2.5 (arrive radius).
+ * Where each stop stands: its block, and the street side its shopfront faces. The camera always looks north, so
+ * fronts face south (or sideways): a shop facing north is only ever seen from behind.
  */
-export const FOOTPRINTS: Record<string, { out: number; r: number }> = {
-  fashionhub: { out: 1.6, r: 2.4 }, // store, awning and clothes rack
-  sprig: { out: 1.6, r: 2.5 }, // shade house and benches of pots
-  lumenfold: { out: 1.4, r: 1.9 }, // lighthouse on its rock base
-  bagyo: { out: 1.4, r: 2.0 }, // weather mast, office hut and instrument box on one slab
-  recipes: { out: 1.6, r: 2.4 }, // eatery roof, counter and stools
-  about: { out: 0.6, r: 1.5 }, // the pier's gate posts; the pier itself runs out over the water
+const SITES: Record<string, { block: Point; face: Face }> = {
+  fashionhub: { block: { x: 0, z: 22 }, face: "s" }, // south row, facing the south street
+  sprig: { block: { x: -22, z: 0 }, face: "e" },
+  lumenfold: { block: { x: 22, z: -22 }, face: "s" }, // north row: tall things go on the far side from the camera
+  bagyo: { block: { x: -22, z: -22 }, face: "s" },
+  recipes: { block: { x: 22, z: 0 }, face: "w" },
+  about: { block: { x: 0, z: -22 }, face: "s" }, // the terminal, facing the plaza; its yard runs back to the bay boulevard and the pier
 };
 
-/** What the jeepney bumps into: one circle per stop's landmark. Driving, tap targets and the check all use this. */
-export const LANDMARKS: Circle[] = stops.map((s) => {
-  const { out, r } = FOOTPRINTS[s.id];
-  return { ...stopPosition(s.angle, STOP_RADIUS + out), r };
-});
+/** How far a landmark's frame sits back from the kerb, so its front steps and pots stand on the sidewalk. */
+const SET_BACK = 0.6;
 
 /**
- * Props off the stops that the jeepney bumps into too, drawn in Landmarks.tsx: the waiting shed on the far side,
- * with a tricycle parked in front of it. One circle covers both (it sits 0.8 towards the middle from the shed).
+ * A stop's place in the town. `front` is the middle of its kerb; models are drawn in a frame at `origin` (just behind
+ * it), turned by `yaw`, with +z facing the street and -z going into the block. `park` is where the jeepney stops, on
+ * the street in front.
  */
-export const SHED = { angle: -95, radius: STOP_RADIUS + 1 };
-export const PROPS: Circle[] = [{ ...stopPosition(SHED.angle, SHED.radius - 0.8), r: 2.3 }];
-
-/** Everything the jeepney bumps into: landmarks first (same order as stops), then props. */
-export const OBSTACLES: Circle[] = [...LANDMARKS, ...PROPS];
-
-/** Where the jeepney parks for a stop: on the island side of the landmark, facing it. */
-export function parkingSpot(angleDegrees: number): Point {
-  return stopPosition(angleDegrees, STOP_RADIUS - 4.5);
+export function site(id: string) {
+  const { block, face } = SITES[id];
+  const d = FACING[face];
+  const front = { x: block.x + d.x * BLOCK_HALF, z: block.z + d.z * BLOCK_HALF };
+  const origin = { x: front.x - d.x * SET_BACK, z: front.z - d.z * SET_BACK };
+  return { front, origin, facing: d, yaw: Math.atan2(d.x, d.z), park: { x: front.x + d.x * 2, z: front.z + d.z * 2 } };
 }
 
-/** The stop whose landmark is within `within` of (x, z), nearest first, or null. */
-export function nearestStop<T extends { angle: number }>(x: number, z: number, list: readonly T[], within = OPEN_RADIUS): T | null {
+/** Where the jeepney parks for a stop: on the street in front of it. */
+export function parkingSpot(id: string): Point {
+  return site(id).park;
+}
+
+/**
+ * Each landmark's size as a circle, for its sign and its click area (the kerb is the wall, not this):
+ * `out` is how far its centre sits behind its frame's origin, `r` its radius. Keep in step with the models in Landmarks.tsx.
+ */
+export const FOOTPRINTS: Record<string, { out: number; r: number }> = {
+  fashionhub: { out: 1.6, r: 2.4 },
+  sprig: { out: 1.6, r: 2.5 },
+  lumenfold: { out: 1.4, r: 1.9 },
+  bagyo: { out: 1.4, r: 2.0 },
+  recipes: { out: 1.6, r: 2.4 },
+  about: { out: 2.5, r: 2.6 },
+};
+
+/** Each stop's landmark as a circle, index-aligned with `stops`: where its sign floats and its click area stands. */
+export const LANDMARKS: Circle[] = stops.map((s) => {
+  const { origin, facing } = site(s.id);
+  const { out, r } = FOOTPRINTS[s.id];
+  return { x: origin.x - facing.x * out, z: origin.z - facing.z * out, r };
+});
+
+/** Everything the jeepney bumps into. Props on the sidewalks sit inside the blocks, so the kerb covers them. */
+export const OBSTACLES: Obstacle[] = BLOCK_BOXES;
+
+/** The stop whose shopfront is within `within` of (x, z), nearest first, or null. */
+export function nearestStop<T extends { id: string }>(x: number, z: number, list: readonly T[], within = OPEN_RADIUS): T | null {
   let best: T | null = null;
   let bestD = within;
   for (const s of list) {
-    const p = stopPosition(s.angle);
-    const d = Math.hypot(p.x - x, p.z - z);
+    const { front } = site(s.id);
+    const d = Math.hypot(front.x - x, front.z - z);
     if (d < bestD) {
       best = s;
       bestD = d;

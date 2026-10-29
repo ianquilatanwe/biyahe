@@ -28,6 +28,15 @@ export const SURFACE_OF: Record<string, number> = {
   "#3d7a3f": SURFACE.leaf, // LEAF_DARK
   "#73b357": SURFACE.leaf, // GRASS_TUFT
   "#2f6b3a": SURFACE.cloth, // SHADE net
+  // Town.tsx
+  "#8cc56b": SURFACE.grass, // the plaza lawn
+  "#b9b2a4": SURFACE.plaster, // kerbs
+  "#a39d90": SURFACE.plaster, // seawall, fountain
+  "#c9c2b4": SURFACE.plaster, // blockout greys
+  "#bdb6a8": SURFACE.plaster,
+  "#d4cdbf": SURFACE.plaster,
+  "#b3ad9f": SURFACE.plaster,
+  "#c4bfb6": SURFACE.plaster,
   // Jeepney.tsx
   "#c3cbd3": SURFACE.steel, // stainless body
   "#9da7b1": SURFACE.steel, // STEEL_DARK
@@ -36,12 +45,11 @@ export const SURFACE_OF: Record<string, number> = {
   "#d9c79e": SURFACE.cloth, // SACK on the roof rack
 };
 
-/** The ground meshes (Island.tsx), by colour: detail laid out in world x/z. */
+/** The ground meshes (Town.tsx), by colour: detail laid out in world x/z. */
 export const GROUND_OF: Record<string, number> = {
   "#f1d9a7": SURFACE.sand,
   "#8cc56b": SURFACE.grass,
-  "#d6c59c": SURFACE.dirt, // the road loop
-  "#d8cbb0": SURFACE.plaster, // the terminal pad
+  "#5d626d": SURFACE.dirt, // asphalt: worn patches and grit
 };
 
 export const SURFACE_GLSL = /* glsl */ `

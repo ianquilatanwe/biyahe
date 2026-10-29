@@ -8,6 +8,7 @@ import {
   BufferAttribute,
   BufferGeometry,
   CanvasTexture,
+  Color,
   ConeGeometry,
   DoubleSide,
   ShaderMaterial,
@@ -373,8 +374,9 @@ const LANDMARK_MODELS: Record<string, (b: Batch) => void> = {
     b.box(WOOD, [1.3, 2.3, 1.3], [-4.6, 1.15, -4.2]);
     plain(b, GLASS, [0.9, 0.6, 0.04], [-4.6, 1.5, -3.53]);
     b.box(BLUE, [1.6, 0.1, 1.6], [-4.6, 2.35, -4.2]);
-    // Jeepneys waiting under the shed, noses to the street, and one more out in the yard.
-    for (const x of [0.4, 3.4]) b.place([x, 0, -3.9], 0, () => parkedJeepney(b));
+    // A jeepney waiting under the shed, nose to the street, and one more out in the yard. The bay beside it (x 3.6) is
+    // the traffic jeepney's that does laps of the town (TRACKS.terminal in traffic.ts).
+    b.place([0.4, 0, -3.9], 0, () => parkedJeepney(b));
     b.place([-3.2, 0, -10.2], 0.5, () => parkedJeepney(b));
     banderitas(b, [-5.6, 3.5, front + 0.05], [5.6, 3.5, front + 0.05], 0.35, 14);
   },
@@ -407,8 +409,8 @@ export function banderitas(b: Batch, from: Vec, to: Vec, sag: number, flags = 10
   }
 }
 
-/** A motorcycle with a roofed sidecar, the island's other public transport. Faces +z from `at`. */
-function tricycle(b: Batch, at: Vec, yaw: number) {
+/** A motorcycle with a roofed sidecar, the town's other public transport. Faces +z from `at`. */
+export function tricycle(b: Batch, at: Vec, yaw: number) {
   b.place(at, yaw, () => {
     b.shadow([-0.3, 0], [1.0, 1.2], 1.4);
     // motorcycle
@@ -579,6 +581,7 @@ function buildBangka(b: Batch) {
 const lumenfold = frameOf("lumenfold");
 const station = frameOf("bagyo");
 const carinderia = frameOf("recipes");
+const plantShop = frameOf("sprig");
 
 /** The wind cups on top of the weather mast: three arms, a cup on each, turned to catch the wind. */
 function buildCups(b: Batch) {
@@ -696,6 +699,50 @@ function rise(g: BufferGeometry, t: number) {
   col.needsUpdate = true;
 }
 
+/**
+ * A few leaves letting go of Sprig & Stone's hanging pots and fluttering down to the sidewalk, drifting the way the wind
+ * blows: one points mesh, like the steam. Each leaf falls for ~8 s, fading in as it leaves and out as it lands.
+ */
+const LEAVES = 8;
+const LEAF_TOP = 2.9; // just under the hanging pots (sprig() above), over the shade-net awning
+function leafGeometry() {
+  const g = new BufferGeometry();
+  g.setAttribute("position", new BufferAttribute(new Float32Array(LEAVES * 3), 3));
+  const rgba = new Float32Array(LEAVES * 4);
+  const tint = new Color();
+  for (let i = 0; i < LEAVES; i++) rgba.set([...tint.set(i % 3 ? LEAF : "#8fb34a").toArray(), 1], i * 4); // some yellowing
+  g.setAttribute("color", new BufferAttribute(rgba, 4));
+  fall(g, 0);
+  return g;
+}
+function fall(g: BufferGeometry, t: number) {
+  const pos = g.attributes.position as BufferAttribute;
+  const col = g.attributes.color as BufferAttribute;
+  for (let i = 0; i < LEAVES; i++) {
+    const f = (t * 0.12 + i / LEAVES + (i % 3) * 0.07) % 1; // 0 letting go, 1 on the ground
+    const x = -2.6 + (i % 6) * 1.04; // under one of the six pots
+    // Blown out past the awning's edge (FRONT + 1.7) before they sink below it, or the awning would hide them.
+    const out = FRONT + 0.8 + 1.2 * Math.min(1, f * 7) + f * 0.6;
+    pos.setXYZ(i, x + f * 0.9 + Math.sin(t * 1.1 + i * 1.7) * 0.35 * f, LEAF_TOP * (1 - f), out + Math.cos(t * 1.6 + i) * 0.15 * f);
+    col.setW(i, Math.min(1, f * 6, (1 - f) * 5));
+  }
+  pos.needsUpdate = true;
+  col.needsUpdate = true;
+}
+/** A leaf's outline: a pointed oval, white (the leaves' colours tint it). */
+function leafTexture() {
+  const c = document.createElement("canvas");
+  c.width = c.height = 32;
+  const g = c.getContext("2d")!;
+  g.fillStyle = "#fff";
+  g.beginPath();
+  g.moveTo(4, 28);
+  g.quadraticCurveTo(4, 6, 28, 4);
+  g.quadraticCurveTo(26, 26, 4, 28);
+  g.fill();
+  return new CanvasTexture(c);
+}
+
 /** Shop signs with real words, on the yellow plate the jeepney's route sign uses, each in its stop's frame. */
 const SIGNS: { id: string; text: string; at: Vec; width: number; yaw?: number; upright?: boolean }[] = [
   { id: "fashionhub", text: "FashionHub · Ukay-ukay", at: [0, 3.58, FRONT + 0.09], width: 4.3 },
@@ -771,6 +818,8 @@ export function Landmarks({ onStop, nearId }: { onStop: (id: string) => void; ne
   const glow = useMemo(() => glowTexture(), []);
   const steam = useMemo(steamGeometry, []);
   const puff = useMemo(() => glowTexture("255,255,255"), []);
+  const leaves = useMemo(leafGeometry, []);
+  const leaf = useMemo(leafTexture, []);
   const calm = useCalm();
   // The "go" cursor goes on the canvas, not the page: scrolling away from a hovered landmark fires no
   // "pointer out", and a body cursor would then stick over the project list.
@@ -783,7 +832,7 @@ export function Landmarks({ onStop, nearId }: { onStop: (id: string) => void; ne
     beamWorld.copy(SHADE_DIR).transformDirection(lampHead.current.matrixWorld);
     toCamera.copy(camera.position).sub(bulbWorld).normalize();
     halo.current.opacity = 0.35 + 0.65 * Math.max(0, beamWorld.dot(toCamera)) ** 3;
-    if (calm.current) return; // reduced motion: the lamp, the boat, the cups, the radar, the steam and the wind hold still
+    if (calm.current) return; // reduced motion: the lamp, the boat, the cups, the radar, the steam, the leaves and the wind hold still
     const t = clock.elapsedTime;
     const dt = Math.min(delta, 1 / 20);
     WIND.value += dt; // drives the swaying plants and flags, the cloud shadows and the beam's dust
@@ -793,6 +842,7 @@ export function Landmarks({ onStop, nearId }: { onStop: (id: string) => void; ne
     lampBase.current.rotation.y = Math.sin(t * 0.25) * 0.8;
     lampHead.current.rotation.x = Math.sin(t * 0.45) * 0.15;
     rise(steam, t);
+    fall(leaves, t);
     boat.current.position.y = Math.sin(t * 1.3) * 0.06;
     boat.current.rotation.z = Math.sin(t * 1.1) * 0.04;
     boat.current.rotation.x = Math.sin(t * 0.9 + 1) * 0.02;
@@ -867,6 +917,13 @@ export function Landmarks({ onStop, nearId }: { onStop: (id: string) => void; ne
       <group position={carinderia.at} rotation-y={carinderia.yaw}>
         <points geometry={steam}>
           <pointsMaterial map={puff} size={1.1} vertexColors transparent depthWrite={false} />
+        </points>
+      </group>
+
+      {/* Leaves drifting down from the plant shop's hanging pots. */}
+      <group position={plantShop.at} rotation-y={plantShop.yaw}>
+        <points geometry={leaves}>
+          <pointsMaterial map={leaf} size={0.35} vertexColors transparent depthWrite={false} />
         </points>
       </group>
 

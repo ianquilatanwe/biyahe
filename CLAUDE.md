@@ -1,7 +1,7 @@
 # Biyahe: coding principles
 
 Ian's 3D portfolio home: drive a jeepney round a small town by the bay to six project stops. On `main` it is still the
-island (live); the town is being built on the `town` branch in four phases (plan: `docs/town-plan.html`).
+island (live); the town is built on the `town` branch in four phases (plan: `docs/town-plan.html`), all four done.
 Next.js 15 + React 19 + three 0.186 + @react-three/fiber 9.8 + drei 10.7. Ian doesn't model:
 everything is built from code primitives (Ian chose code over Blender for the jeepney on 2026-10-28). Distilled from the `threejs-react-three-fiber`,
 `threejs-performance`, `camera-systems` and `codebase-design` skills; load them for detail.
@@ -63,7 +63,19 @@ everything is built from code primitives (Ian chose code over Blender for the je
   batch's shadows are one transparent mesh. Moving things use `<SoftShadow>`.
 - The jeepney bumps into `OBSTACLES` (world.ts): the block rectangles, kerb to kerb. Props on sidewalks sit inside a
   block, so the kerb covers them; anything standing in a street needs its own circle there. `LANDMARKS` (sign and click
-  anchors, not colliders) stays index-aligned with `stops`.
+  anchors, not colliders) stays index-aligned with `stops`. Against boxes the jeepney is one 1.3 m circle (its nose may
+  hang over a sidewalk); against circles (the traffic) it's three (`BODY` in driving.ts), or its nose swings through a tricycle.
+- **Traffic** (`src/lib/traffic.ts`, drawn by `Traffic.tsx`, stepped by the Driver before the jeepney): 3 tricycles and
+  2 jeepneys on fixed loops (`TRACKS`, lane positions 2 m right of a street's middle, corners rounded). Each rides its
+  track like a train and only picks a speed: it stops short of any body on its track ahead, takes turns at `ZONES` (the
+  crossings and the terminal's gate; a claim is remade every tick, and only when nobody is queued in front, or the back
+  of a queue holds a crossing the front waits for), and, held up by the visitor for 2 s, toots and pulls round along
+  the street's middle (`PASS_SHIFT` 2.05: clears a parked jeepney and the oncoming lane), never sideways into anybody
+  (`fits`). Shared lanes always run the same way. The autopilot queues behind traffic going its way and steers round
+  traffic that isn't (that traffic has stopped for it). Reduced motion takes the traffic off the streets and keeps the
+  terminal's jeepney parked. `node src/lib/traffic.check.ts` runs it alone for 10 min, parked at every stop, and with
+  300 tap trips: no overlaps, no jams. Each kind is one `Fleet` (instanced `Batched` model, Batched.tsx): 2 draw calls
+  per kind. `weathered()` handles `instanceMatrix`, so the clouds pass over instanced copies too.
 - Click areas are invisible meshes (`<meshBasicMaterial visible={false} />`): raycast, but no draw call.
 - The camera always looks north (towards -z). Stops face south or sideways (a north-facing shop is only seen from
   behind), tall things go in the north row, and the south row stays low. Whatever still stands between the camera and
@@ -84,7 +96,8 @@ everything is built from code primitives (Ian chose code over Blender for the je
   after the sRGB step. The sea's foam breaks along the seawall at `SHORE_Z`.
 - No real-time shadows: fake soft shadows with a dark transparent disc.
 - Measure with `renderer.info.render.calls` before optimising; merge or instance static props when
-  the count climbs (town budget: ≤ 60 draw calls, ≤ 400k triangles; phase 3 is ~29 and ~275k).
+  the count climbs (town budget: ≤ 60 draw calls, ≤ 400k triangles; phase 4 is ~33 and ~293k). Count instanced draws
+  too (`drawElementsInstanced`): `tmp/biyahe/tris.mjs` does.
 - No new texture or model files unless they're small (whole scene under 1 MB of assets).
 
 ## The HTML layer (signboard style)
@@ -118,10 +131,14 @@ everything is built from code primitives (Ian chose code over Blender for the je
   jeepney. Poles keep 6 m clear of every stop's front.
 
 ## Sound
-- `src/lib/sound.ts` is one module-level engine (Web Audio, no files): engine, sea, horn. Ian liked the idle as it is:
+- `src/lib/sound.ts` is one module-level engine (Web Audio, no files): engine, sea, horn, and the town bed (far traffic
+  rumble, the odd distant horn every 7–20 s, plaza chatter by distance to the plaza, `toot()` from held-up traffic);
+  every horn goes through `beep()`. Ian liked the idle as it is:
   the moving layers (gears, sub-octave chug, exhaust, tyres) all fall back to zero when parked, so idle never changes.
   Never chop a signal with a square wave after its last filter, and keep sub-bass oscillators triangle/sine: hard
-  edges there are the clicks Ian heard as "broken speaker" spikes (clip B). A/B listening: `catalog-video/tmp/biyahe/drive-audio.mjs` records a fixed drive to mp3 (clips in `sound-review/`, gitignored). On by default, but no
+  edges there are the clicks Ian heard as "broken speaker" spikes (clip B). A/B listening: `catalog-video/tmp/biyahe/drive-audio.mjs` records a fixed drive to mp3 (clips in `sound-review/`, gitignored; `PARK=s` stays
+  parked at the end). It blurs the sound button after clicking it: Space presses a focused button, and in clips A–C it
+  switched the sound off halfway (they stop at ~17 s). Horn edges show as sample jumps; count clicks outside the horns. On by default, but no
   AudioContext exists until the first click/tap/key (`SoundToggle` in the header); paused while the island is
   scrolled away or the tab is hidden. The frame loop feeds it numbers (`sound.update`), at most 20 updates a second.
 

@@ -7,6 +7,7 @@ import { MathUtils, Vector2, Vector3 } from "three";
 import { autopilot, NO_INPUT, step, type Car } from "@/lib/driving";
 import { sound } from "@/lib/sound";
 import { stops } from "@/lib/stops";
+import { makeTraffic, stepTraffic, type Traffic as TrafficState, type Vehicle } from "@/lib/traffic";
 import { tuning } from "@/lib/tuning";
 import { nearestStop, OBSTACLES, SHORE_Z } from "@/lib/world";
 import type { Destination } from "../IslandExperience";
@@ -15,6 +16,7 @@ import { Landmarks } from "./Landmarks";
 import { StopSigns } from "./StopSigns";
 import { TapMarker } from "./TapMarker";
 import { Town } from "./Town";
+import { Traffic } from "./Traffic";
 import { useCalm } from "./useCalm";
 import { useKeys } from "./useKeys";
 import { FOCUS } from "./weather";
@@ -23,17 +25,20 @@ const SKY = "#f6c9a1";
 const START: Car = { x: -11, z: 24, yaw: Math.PI, speed: 0, yawRate: 0 }; // on the street west of FashionHub, facing north up the town
 const GIVE_UP_AFTER = 20; // seconds: an unreachable destination never leaves the jeepney circling (driving.check.ts uses the same)
 const focusPoint = new Vector3();
+/** A vehicle the jeepney has been holding up toots once before it pulls round. */
+const toot = (v: Vehicle) => sound.toot(v.kind);
 const buffer = new Vector2();
 
 type DriverProps = {
   driving: boolean;
+  traffic: TrafficState;
   destination: RefObject<Destination | null>;
   onNear: (id: string | null) => void;
   onArrive: (stopId: string) => void;
 };
 
 /** Runs every frame: works out the input, moves the jeepney, reports the nearby stop, eases the camera. */
-function Driver({ driving, destination, onNear, onArrive }: DriverProps) {
+function Driver({ driving, traffic, destination, onNear, onArrive }: DriverProps) {
   const parts = useRef<JeepneyParts>(null);
   const keys = useKeys(driving);
   const calm = useCalm();
@@ -53,6 +58,7 @@ function Driver({ driving, destination, onNear, onArrive }: DriverProps) {
 
   useFrame(({ clock }, delta) => {
     const dt = Math.min(delta, 1 / 20); // no giant leap after a stutter, a tab switch or a pause
+    stepTraffic(traffic, car.current, dt, calm.current, toot);
 
     // Keys win over the autopilot: touching a key cancels any trip in progress.
     let input = keys.read();
@@ -73,7 +79,7 @@ function Driver({ driving, destination, onNear, onArrive }: DriverProps) {
     } else if (trip) {
       tripTime.current += dt;
       const timedOut = tripTime.current >= GIVE_UP_AFTER;
-      const auto = timedOut ? null : autopilot(car.current, trip, OBSTACLES);
+      const auto = timedOut ? null : autopilot(car.current, trip, OBSTACLES, undefined, traffic.bodies);
       if (auto) input = auto;
       else {
         destination.current = null; // arrived (or gave up)
@@ -85,11 +91,13 @@ function Driver({ driving, destination, onNear, onArrive }: DriverProps) {
       }
     }
 
-    const c = (car.current = step(car.current, input, dt, OBSTACLES));
+    const c = (car.current = step(car.current, input, dt, traffic.obstacles)); // the blocks and the traffic
 
     // Sound: the engine follows speed and throttle; the sea gets louder towards the bay (ahead, so no panning).
     const toWater = c.z - SHORE_Z - 4; // 0 on the bay boulevard's kerb
-    sound.update(c.speed, input.throttle ? 1 : 0, 1 - Math.min(toWater / 16, 1), 0);
+    // The plaza's chatter is loudest beside it (its kerbs are 7 m out) and gone two blocks away.
+    const plaza = 1 - Math.min(Math.max(Math.hypot(c.x, c.z) - 9, 0) / 22, 1);
+    sound.update(c.speed, input.throttle ? 1 : 0, 1 - Math.min(toWater / 16, 1), 0, plaza);
 
     // Tell the page which stop is in range, only when it changes (a React update, not every frame).
     const id = nearestStop(c.x, c.z, stops)?.id ?? null;
@@ -145,7 +153,7 @@ function FirstFrames({ onReady }: { onReady: () => void }) {
   return null;
 }
 
-type WorldProps = DriverProps & {
+type WorldProps = Omit<DriverProps, "traffic"> & {
   /** false while the island is scrolled out of view: nothing renders. */
   active: boolean;
   onGoTo: (d: Destination) => void;
@@ -159,6 +167,7 @@ type WorldProps = DriverProps & {
 
 export default function World({ active, onGoTo, onGoToStop, nearId, onOpen, onReady, ...driver }: WorldProps) {
   const [sharpness, setSharpness] = useState(1.75);
+  const traffic = useMemo(makeTraffic, []);
   return (
     <Canvas
       flat // no filmic tone mapping: the flat colours show exactly as their hex values
@@ -176,7 +185,8 @@ export default function World({ active, onGoTo, onGoToStop, nearId, onOpen, onRe
       <directionalLight position={[-26, 22, 14]} intensity={2.25} color="#ffe9cc" />
       <Town onGround={onGoTo} />
       <Landmarks onStop={onGoToStop} nearId={nearId} />
-      <Driver {...driver} />
+      <Driver {...driver} traffic={traffic} />
+      <Traffic traffic={traffic} />
       <TapMarker destination={driver.destination} />
       <StopSigns nearId={nearId} onStop={onGoToStop} onOpen={onOpen} />
       <FirstFrames onReady={onReady} />

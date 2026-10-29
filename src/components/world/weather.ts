@@ -84,8 +84,13 @@ export function weathered<T extends Material>(
       .replace(
         "#include <project_vertex>",
         `#include <project_vertex>
-        vCloudXZ = (modelMatrix * vec4(transformed, 1.0)).xz;
-        ${fade ? "vWorldY = (modelMatrix * vec4(transformed, 1.0)).y;" : ""}`,
+        vec4 weatherAt = vec4(transformed, 1.0);
+        #ifdef USE_INSTANCING
+          weatherAt = instanceMatrix * weatherAt; // each copy of an instanced mesh (the traffic) is somewhere else
+        #endif
+        weatherAt = modelMatrix * weatherAt;
+        vCloudXZ = weatherAt.xz;
+        ${fade ? "vWorldY = weatherAt.y;" : ""}`,
       );
     shader.fragmentShader = shader.fragmentShader
       .replace(

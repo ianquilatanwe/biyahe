@@ -1,5 +1,5 @@
 /**
- * Covers the island until its first frame is on screen: a route signboard and a little jeepney
+ * Covers the town until its first frame is on screen: a route signboard and a little jeepney
  * driving along a road (parked, for reduced motion). Decorative: it sits in the aria-hidden
  * island wrapper, and the page's heading and project list are already readable underneath.
  */
@@ -9,9 +9,9 @@ export function Loading({ done }: { done: boolean }) {
       className={`absolute inset-0 z-[9] grid place-items-center bg-sky transition-opacity duration-500 motion-reduce:transition-none ${done ? "pointer-events-none opacity-0" : ""}`}
     >
       <div className="flex flex-col items-center gap-5">
-        <p className="plate px-6 py-1.5 text-2xl text-red-deep">Island loop</p>
+        <p className="plate px-6 py-1.5 text-2xl text-red-deep">Town loop</p>
         <div className="relative h-9 w-56 overflow-hidden">
-          {/* The island's stainless jeepney from the side, in the page's own colour tokens. */}
+          {/* The town's stainless jeepney from the side, in the page's own colour tokens. */}
           <svg viewBox="0 0 54 26" className="absolute bottom-2 left-1/2 w-14 -translate-x-1/2 motion-safe:left-0 motion-safe:translate-x-0 motion-safe:animate-drive">
             <g className="fill-[#d5dbe1]">
               <rect x="1" y="3" width="41" height="4" rx="1" />
@@ -38,7 +38,7 @@ export function Loading({ done }: { done: boolean }) {
           </svg>
           <div className="absolute inset-x-0 bottom-0 h-1 bg-[repeating-linear-gradient(90deg,var(--color-ink)_0_12px,transparent_12px_20px)]" />
         </div>
-        <p className="font-display text-lg font-semibold text-ink">Loading the island…</p>
+        <p className="font-display text-lg font-semibold text-ink">Loading the town…</p>
       </div>
     </div>
   );

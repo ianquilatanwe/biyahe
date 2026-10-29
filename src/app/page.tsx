@@ -16,7 +16,7 @@ export default function Home() {
   return (
     <>
       <main>
-        {/* The island fills the first screen. Everything on it is also on the route board below. */}
+        {/* The town fills the first screen. Everything in it is also on the route board below. */}
         <section aria-labelledby="title" className="relative h-svh overflow-hidden bg-sky">
           {/* The header comes first in the source so "List" is the first Tab stop; z-20 keeps it above the island's signs,
               which measure it (data-hud-header) to stay below it. */}
@@ -36,7 +36,7 @@ export default function Home() {
                 <span className="sm:hidden">List</span>
                 <span className="hidden sm:inline">Project list</span>
                 <DownIcon />
-                <span className="sr-only"> (skip the island)</span>
+                <span className="sr-only"> (skip the town)</span>
               </a>
               <a href={UPWORK} target="_blank" rel="noopener noreferrer" className="sign-red min-h-10 gap-1 px-2.5 text-sm sm:gap-1.5 sm:px-3">
                 <span className="sm:hidden">Hire me</span>
@@ -44,14 +44,14 @@ export default function Home() {
                 <OutIcon />
                 <span className="sr-only"> (Upwork, opens in a new tab)</span>
               </a>
-              {/* Last, so "skip the island" stays the first Tab stop. */}
+              {/* Last, so "skip the town" stays the first Tab stop. */}
               <SoundToggle />
             </div>
           </div>
           <IslandExperience />
         </section>
 
-        {/* The route board: the island's road runs off the bottom of the island and down past every stop to the pier. */}
+        {/* The route board: the town's road runs off the bottom of the screen and down past every stop to the pier. */}
         <section id="projects" aria-labelledby="projects-title">
           <Stripes />
           <div aria-hidden="true" className="h-7 bg-ink">
@@ -63,7 +63,7 @@ export default function Home() {
               Projects
             </h2>
             <p className="mt-4 max-w-xl text-lg text-pretty">
-              Every stop on the island loop, in order, without the drive. The route ends at the pier.
+              Every stop on the town loop, in order, without the drive. The route ends at the jeepney terminal by the pier.
             </p>
 
             {/* pb-20 lets the road carry on past the last card, down into the pier. */}
@@ -122,7 +122,7 @@ export default function Home() {
           </div>
         </div>
         <p className="mx-auto max-w-5xl border-t-2 border-white/20 px-4 py-6 text-sm text-white/75 sm:px-8">
-          Biyahe is built in code: Next.js and three.js, no 3D model files. Everything on the island is also on this page.
+          Biyahe is built in code: Next.js and three.js, no 3D model files. Everything in the town is also on this page.
         </p>
       </footer>
     </>

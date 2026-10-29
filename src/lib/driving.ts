@@ -5,7 +5,7 @@
  * The world is flat: x/z is the ground, yaw 0 faces +z, and a larger yaw turns left.
  */
 import { tuning } from "./tuning.ts";
-import { CROSSINGS, EDGE, STREETS, type Obstacle, type Point } from "./world.ts";
+import { CROSSINGS, EDGE, STREETS, type Circle, type Obstacle, type Point } from "./world.ts";
 
 export type Car = { x: number; z: number; yaw: number; speed: number; yawRate: number };
 
@@ -16,6 +16,11 @@ export const NO_INPUT: Input = { throttle: 0, steer: 0 };
 
 /** The jeepney as a circle, for bumping into kerbs. Its nose and tail reach ~1.5 m further, over the sidewalk. */
 const CAR_RADIUS = 1.3;
+/**
+ * The jeepney as three circles along its length, for bumping into round things (the traffic, traffic.ts): there the
+ * nose and tail matter, or it would swing its nose through a tricycle.
+ */
+export const BODY = { along: [-1.6, 0, 1.6], r: 0.95 };
 /** Extra room the autopilot leaves round a kerb corner, on top of the jeepney's own radius. */
 const CLEARANCE = 0.9;
 /** The furthest the jeepney's centre may go from the middle, either way: the outer kerbs. */
@@ -98,12 +103,23 @@ export function step(car: Car, input: Input, dt: number, obstacles: Obstacle[] =
   // pace, too slow to steer away (steering needs speed).
   const headOn = (nx: number, nz: number) => clamp(-(Math.sin(yaw) * nx + Math.cos(yaw) * nz) * Math.sign(speed), 0, 1);
 
-  // Soft bump against kerbs: slide out to the edge and lose some speed.
+  // Soft bump against kerbs and traffic: slide out to the edge and lose some speed.
   for (const o of obstacles) {
-    const out = pushOut(o, x, z, CAR_RADIUS);
-    if (!out) continue;
-    ({ x, z } = out);
-    speed *= 1 - 0.5 * headOn(out.nx, out.nz);
+    if (isBox(o)) {
+      const out = pushOut(o, x, z, CAR_RADIUS);
+      if (!out) continue;
+      ({ x, z } = out);
+      speed *= 1 - 0.5 * headOn(out.nx, out.nz);
+      continue;
+    }
+    for (const d of BODY.along) {
+      const px = x + Math.sin(yaw) * d, pz = z + Math.cos(yaw) * d;
+      const out = pushOut(o, px, pz, BODY.r);
+      if (!out) continue;
+      x += out.x - px;
+      z += out.z - pz;
+      speed *= 1 - 0.5 * headOn(out.nx, out.nz);
+    }
   }
 
   // The outer kerbs: hold it inside the square.
@@ -225,8 +241,10 @@ export function aimPoint(from: Point, target: Point, obstacles: Obstacle[]): Poi
  * - Follow the streets: steer for `route`'s aim point, round the blocks.
  * - Slow down before a corner, enough to make the turn (the turning circle shrinks with speed).
  * - Target close behind: reverse into it rather than loop round.
+ * - Traffic ahead going its way (`traffic`, the vehicles' bodies): slow down and queue behind it, rather than ram it.
+ *   Traffic coming the other way or across stops for the jeepney instead (traffic.ts), so it doesn't wait for that.
  */
-export function autopilot(car: Car, target: Point, obstacles: Obstacle[] = [], arriveRadius = 2.5): Input | null {
+export function autopilot(car: Car, target: Point, obstacles: Obstacle[] = [], arriveRadius = 2.5, traffic: readonly (Circle & { yaw: number })[] = []): Input | null {
   const toTarget = Math.hypot(target.x - car.x, target.z - car.z);
   if (toTarget < arriveRadius) return null;
 
@@ -254,7 +272,7 @@ export function autopilot(car: Car, target: Point, obstacles: Obstacle[] = [], a
     return { throttle: -0.7, steer: clamp(-wrap(diff - Math.PI) * 2, -1, 1) };
   }
 
-  const steer = clamp(diff * 2, -1, 1);
+  let steer = clamp(diff * 2, -1, 1);
 
   const t = tuning;
   const turnable = t.turn * toTarget * 0.6; // fast enough to arrive, slow enough not to circle
@@ -266,6 +284,24 @@ export function autopilot(car: Car, target: Point, obstacles: Obstacle[] = [], a
     const cornerSpeed = 4 + 9 * Math.max(0, 1 - bend / (Math.PI / 2));
     wanted = Math.min(wanted, Math.sqrt(cornerSpeed * cornerSpeed + t.brake * toAim));
   }
+  // Traffic in the jeepney's path (a body within its width, straight ahead). Something a lane over (2 m off its
+  // middle) doesn't count, so it squeezes past traffic on the street's middle.
+  // - Going the same way: queue ~1 m behind it.
+  // - Coming the other way or across: it has stopped for the jeepney (traffic.ts), so steer round it, keeping right.
+  const hx = Math.sin(car.yaw), hz = Math.cos(car.yaw);
+  let dodge = 0;
+  for (const c of traffic) {
+    const ahead = (c.x - car.x) * hx + (c.z - car.z) * hz;
+    const side = (c.x - car.x) * hz - (c.z - car.z) * hx; // > 0: on the left
+    if (ahead <= 0 || ahead > 14) continue;
+    if (Math.cos(c.yaw - car.yaw) >= 0.5) {
+      if (Math.abs(side) < 0.8 + c.r) wanted = Math.min(wanted, Math.sqrt(t.brake * Math.max(0, ahead - c.r - 3.6)));
+    } else if (ahead < 8 && Math.abs(side) < CAR_RADIUS + c.r) {
+      dodge = (side > -0.5 ? -1 : 1) * (1 - ahead / 8);
+      wanted = Math.min(wanted, 4);
+    }
+  }
+  steer = clamp(steer + dodge * 2, -1, 1);
   let throttle = clamp((wanted - car.speed) * 0.5, -1, 1);
   if (throttle < 0 && car.speed < 0.5) throttle = 0; // brake, but never back up by accident
   return { throttle, steer };

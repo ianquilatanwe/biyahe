@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useImperativeHandle, useMemo, useRef, type Ref } from "react";
 import {
   BoxGeometry,
   BufferAttribute,
@@ -11,6 +11,7 @@ import {
   CylinderGeometry,
   DodecahedronGeometry,
   Euler,
+  InstancedMesh,
   Matrix4,
   MeshBasicMaterial,
   MeshLambertMaterial,
@@ -222,4 +223,48 @@ export function Batched({ build, ao = true, fade = false }: { build: (b: Batch) 
 /** A soft shadow that moves with its parent (the jeepney's): same disc and paint as the batched ones. */
 export function SoftShadow({ size }: { size: [number, number] }) {
   return <mesh geometry={DISC} material={SHADOW_PAINT} position-y={0.04} scale={[size[0], 1, size[1]]} renderOrder={-1} />;
+}
+
+export type FleetHandle = {
+  /** Moves copy `i` to (x, z), turned by `yaw`. */
+  place(i: number, x: number, z: number, yaw: number): void;
+  /** Draws only the first `n` copies. */
+  show(n: number): void;
+};
+
+const matrix = new Matrix4();
+
+/**
+ * Up to `count` copies of one batched model that each move on their own (the traffic's tricycles, its jeepneys): one
+ * draw call for all their bodies and one for their shadows, however many there are. `build`'s own shadows are left out:
+ * each copy gets one soft shadow of radii `shadow` under it instead, which moves with it.
+ */
+export function Fleet({ build, count, shadow, ref }: { build: (b: Batch) => void; count: number; shadow: [number, number]; ref?: Ref<FleetHandle> }) {
+  const solid = useMemo(() => {
+    const b = new Batch();
+    build(b);
+    return b.build().solid;
+  }, [build]);
+  const disc = useMemo(() => DISC.clone().scale(shadow[0], 1, shadow[1]).translate(0, 0.04, 0), [shadow]);
+  const bodies = useRef<InstancedMesh>(null!);
+  const shadows = useRef<InstancedMesh>(null!);
+  useImperativeHandle(ref, () => ({
+    place(i, x, z, yaw) {
+      matrix.makeRotationY(yaw).setPosition(x, 0, z);
+      for (const m of [bodies.current, shadows.current]) {
+        m.setMatrixAt(i, matrix);
+        m.instanceMatrix.needsUpdate = true;
+      }
+    },
+    show(n) {
+      bodies.current.count = shadows.current.count = n;
+    },
+  }), []);
+  // Not culled: an instanced mesh's bounds don't follow its copies round the town.
+  return (
+    <>
+      <instancedMesh ref={bodies} args={[solid, VERTEX_PAINT, count]} frustumCulled={false} />
+      <instancedMesh ref={shadows} args={[disc, SHADOW_PAINT, count]} frustumCulled={false} renderOrder={-1} />
+    </>
+  );
 }

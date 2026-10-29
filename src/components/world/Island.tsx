@@ -41,8 +41,8 @@ export function Island({ onGround }: { onGround: (p: Point) => void }) {
     onGround(reachable({ x: e.point.x, z: e.point.z }, OBSTACLES));
   };
 
-  const sand = useMemo(() => roughenEdge(new CylinderGeometry(ISLAND_RADIUS, ISLAND_RADIUS + 3, 2, 40, 1), ISLAND_RADIUS - 1), []);
-  const grass = useMemo(() => roughenEdge(new CircleGeometry(GRASS_RADIUS, 40), GRASS_RADIUS - 0.5), []);
+  const sand = useMemo(() => roughenEdge(new CylinderGeometry(ISLAND_RADIUS, ISLAND_RADIUS + 3, 2, 96, 1), ISLAND_RADIUS - 1), []);
+  const grass = useMemo(() => roughenEdge(new CircleGeometry(GRASS_RADIUS, 96), GRASS_RADIUS - 0.5), []);
 
   return (
     <group>
@@ -51,11 +51,11 @@ export function Island({ onGround }: { onGround: (p: Point) => void }) {
       <mesh geometry={grass} rotation-x={-Math.PI / 2} position-y={0.01} material={paint(GRASS)} onClick={tapGround} />
       {/* The jeepney's route: a packed-earth loop past every stop (the parking spots sit on it). */}
       <mesh rotation-x={-Math.PI / 2} position-y={0.015} material={paint(ROAD)} onClick={tapGround}>
-        <ringGeometry args={[13.3, 15.7, 72]} />
+        <ringGeometry args={[13.3, 15.7, 144]} />
       </mesh>
       {/* Terminal pad in the middle, where the trip starts. */}
       <mesh rotation-x={-Math.PI / 2} position-y={0.02} material={paint("#d8cbb0")} onClick={tapGround}>
-        <circleGeometry args={[4, 24]} />
+        <circleGeometry args={[4, 48]} />
       </mesh>
     </group>
   );

@@ -5,11 +5,13 @@ import { useFrame } from "@react-three/fiber";
 import { Color, ShaderMaterial, UniformsLib, UniformsUtils } from "three";
 import { ISLAND_RADIUS } from "@/lib/world";
 import { useCalm } from "./useCalm";
+import { CLOUDS_GLSL, WIND } from "./weather";
 
 /**
  * The sea as one flat disc with a small shader, so it costs a single draw call:
  * turquoise shallows fading to deeper blue, a slow shimmer, and foam that hugs the
- * wobbly coastline (the same wobble() formula as world.ts) with thin lines rolling in.
+ * wobbly coastline (the same wobble() formula as world.ts) with thin lines rolling in, sun glints twinkling
+ * on the ripples, and the same drifting cloud shadows as the land.
  */
 const vertexShader = /* glsl */ `
   varying vec2 vXZ;
@@ -25,12 +27,14 @@ const vertexShader = /* glsl */ `
 
 const fragmentShader = /* glsl */ `
   uniform float uTime;
+  uniform float uWind;
   uniform float uShore;
   uniform vec3 uShallow;
   uniform vec3 uDeep;
   uniform vec3 uFoam;
   varying vec2 vXZ;
   #include <fog_pars_fragment>
+  ${CLOUDS_GLSL}
 
   // Keep in step with wobble() in src/lib/world.ts.
   float wobble(float a) { return sin(a * 3.0) * 0.9 + sin(a * 7.0 + 1.3) * 0.5; }
@@ -49,6 +53,16 @@ const fragmentShader = /* glsl */ `
     float line = smoothstep(0.0, 0.05, f) * (1.0 - smoothstep(0.05, 0.16, f));
     line *= (1.0 - smoothstep(0.4, 4.5, d)) * smoothstep(0.35, 0.8, 0.5 + 0.5 * sin(a * 11.0 + d * 0.7));
     col = mix(col, uFoam, clamp(max(rim, line * 0.8), 0.0, 1.0));
+
+    // Sun glints: one in fourteen 60 cm cells holds a small bright dot that flashes now and then, each on its own clock.
+    // Kept off the foam and faded out with distance, where they'd shimmer into noise.
+    vec2 cell = floor(vXZ * 1.6);
+    float h = fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453);
+    float flash = smoothstep(0.82, 1.0, sin(uTime * (1.2 + h * 2.0) + h * 40.0));
+    float spot = 1.0 - smoothstep(0.04, 0.14, length(fract(vXZ * 1.6) - 0.5));
+    float glint = step(0.93, h) * flash * spot * smoothstep(1.5, 5.0, d) * (1.0 - smoothstep(25.0, 55.0, d));
+    col = mix(col, vec3(1.0, 0.98, 0.9), glint * 0.85);
+    col *= clouds(vXZ);
 
     gl_FragColor = vec4(col, 1.0);
     #include <tonemapping_fragment>
@@ -78,6 +92,7 @@ export function Water() {
       }),
     [],
   );
+  material.uniforms.uWind = WIND; // after the merge, which copies values: this one is shared, not copied
 
   useFrame((_, delta) => {
     if (!calm.current) material.uniforms.uTime.value += Math.min(delta, 1 / 20);

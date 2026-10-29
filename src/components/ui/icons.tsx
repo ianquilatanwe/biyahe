@@ -29,3 +29,11 @@ export const DownIcon = ({ className = "size-4" }: IconProps) => (
     <path d="M12 5v14M6 13l6 6 6-6" />
   </svg>
 );
+
+/** A speaker: sound waves when on, a cross when off. */
+export const SoundIcon = ({ on, className = "size-4" }: IconProps & { on: boolean }) => (
+  <svg {...base} className={className}>
+    <path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z" />
+    {on ? <path d="M15.5 9.5a3.5 3.5 0 0 1 0 5M18 7a7 7 0 0 1 0 10" /> : <path d="M16 10l4 4M20 10l-4 4" />}
+  </svg>
+);

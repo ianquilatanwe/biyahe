@@ -72,7 +72,7 @@
       "kind": "custom",
       "refersTo": "plate",
       "description": "The header plate: a label that doesn't press. Title in red-deep, split from the name by an ink rule.",
-      "html": "<div class=\"ds-plate\"><strong class=\"ds-plate-title\">Biyahe</strong><span class=\"ds-plate-rule\"></span><span class=\"ds-plate-sub\">Ian Quilatan, frontend developer</span></div>",
+      "html": "<div class=\"ds-plate\"><strong class=\"ds-plate-title\">Biyahe</strong><span class=\"ds-plate-rule\"></span><span class=\"ds-plate-sub\">Ian Joseph Quilatan, frontend developer</span></div>",
       "css": ".ds-plate { display: inline-flex; align-items: center; gap: 10px; min-height: 40px; padding: 4px 12px 4px 10px; border: 2px solid #1d2433; border-radius: 8px; background: #ffc93c; color: #1d2433; font-family: Fredoka, sans-serif; font-weight: 600; box-shadow: 0 3px 0 #1d2433; } .ds-plate-title { font-size: 20px; line-height: 1; color: #9e1426; font-weight: 600; } .ds-plate-rule { width: 2px; height: 20px; background: #1d2433; } .ds-plate-sub { font-size: 14px; font-weight: 500; }"
     },
     {

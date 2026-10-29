@@ -1,6 +1,6 @@
 # Biyahe
 
-My portfolio home page. *Biyahe* is Tagalog for "trip": you drive a jeepney around a small island and stop at five
+My portfolio home page. *Biyahe* is Tagalog for "trip": you drive a jeepney around a small island and stop at six
 landmarks, each one a project. Prefer not to drive? "Skip the island" jumps straight to a plain list of the same projects.
 
 | Stop | Landmark | Project |
@@ -8,6 +8,7 @@ landmarks, each one a project. Prefer not to drive? "Skip the island" jumps stra
 | FashionHub | Sari-sari store | Product listing page in Next.js |
 | Sprig & Stone | Plant nursery | Landing page in Next.js |
 | Lumenfold | Lighthouse | Scroll-driven motion demo |
+| Bagyo | Weather station | Scroll-driven WebGL typhoon |
 | Recipe Finder | Carinderia | Flutter app, also on the web |
 | Pier | Pier with a bangka | About me and links |
 
@@ -15,6 +16,7 @@ landmarks, each one a project. Prefer not to drive? "Skip the island" jumps stra
 
 - **Keyboard:** W A S D or the arrow keys. Park next to a landmark and press **E** (or the "Open" button) to see its project.
 - **Mouse or touch:** click or tap the ground and the jeepney drives itself there. Click a landmark to drive to it and open its card.
+- **Horn:** **H** honks. The jeepney also beeps twice when it arrives at a stop.
 - **No driving at all:** the stop buttons along the bottom drive you to each stop and open its card.
 
 ## How it's built
@@ -28,7 +30,17 @@ palm tree and the jeepney itself are built in code from boxes, cylinders, cones 
 - **Phones first.** About 30 draw calls per frame, because all the static parts are merged into one mesh, with each part's colour (and baked shading) stored in its corners. Sharpness is
   capped on high-density screens and drops one step if a phone can't keep up. Nothing renders while the island is scrolled out of view.
 - **Accessible.** The 3D canvas is hidden from screen readers, and everything on it is also a real button or link. The project cards
-  are native `<dialog>` elements. With "reduce motion" turned on, the bouncing, camera sway and water animation stop.
+  are native `<dialog>` elements. With "reduce motion" turned on, the bouncing, camera sway, wind and water animation stop.
+- **Shaders for the weather, not extra objects.** The sea is one shader (shallows, foam, sun glints). Palms, grass and
+  flags sway in the wind, and cloud shadows drift over everything, by adding a few lines to the shaders of the existing
+  materials, so they cost no extra draw calls (`src/components/world/weather.ts`). The lighthouse beam is a soft shader cone.
+  Surfaces get detail the same way, drawn in the shader with no image files (`surfaces.ts`): wood grain, ridged zinc
+  roofs, brushed steel, plaster speckle, rock, leaves, cloth, and sand, grass and gravel on the ground.
+  Edges are bevelled, round parts have twice the sides, rocks are chipped and palms have arching fronds with leaflets:
+  about 113,000 triangles, still one mesh, so still ~30 draw calls.
+- **Sound made in code.** A diesel engine that idles, pulls through three gears and chugs harder when you press on, the sea getting louder near the shore, and the horn,
+  all generated with the Web Audio API (`src/lib/sound.ts`), so there are no audio files. It's on by default but only
+  starts after your first click, tap or key press, and the header button turns it off.
 - **Game rules are plain functions.** Driving, the coastline, the stops and the autopilot live in `src/lib` with no 3D code, and
   `node src/lib/driving.check.ts` tests them (including an autopilot run to each stop from 200 random spots).
 

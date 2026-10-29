@@ -37,6 +37,7 @@ export const FOOTPRINTS: Record<string, { out: number; r: number }> = {
   fashionhub: { out: 1.6, r: 2.4 }, // store, awning and clothes rack
   sprig: { out: 1.6, r: 2.5 }, // shade house and benches of pots
   lumenfold: { out: 1.4, r: 1.9 }, // lighthouse on its rock base
+  bagyo: { out: 1.4, r: 2.0 }, // weather mast, office hut and instrument box on one slab
   recipes: { out: 1.6, r: 2.4 }, // eatery roof, counter and stools
   about: { out: 0.6, r: 1.5 }, // the pier's gate posts; the pier itself runs out over the water
 };
@@ -51,7 +52,7 @@ export const LANDMARKS: Circle[] = stops.map((s) => {
  * Props off the stops that the jeepney bumps into too, drawn in Landmarks.tsx: the waiting shed on the far side,
  * with a tricycle parked in front of it. One circle covers both (it sits 0.8 towards the middle from the shed).
  */
-export const SHED = { angle: -105, radius: STOP_RADIUS + 1 };
+export const SHED = { angle: -95, radius: STOP_RADIUS + 1 };
 export const PROPS: Circle[] = [{ ...stopPosition(SHED.angle, SHED.radius - 0.8), r: 2.3 }];
 
 /** Everything the jeepney bumps into: landmarks first (same order as stops), then props. */

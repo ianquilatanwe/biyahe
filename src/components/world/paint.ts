@@ -1,4 +1,6 @@
 import { MeshLambertMaterial } from "three";
+import { GROUND_OF } from "./surfaces";
+import { weathered } from "./weather";
 
 // For the few meshes that stay separate (wheels, ground). Static parts don't use this: Batched merges
 // them into one vertex-coloured mesh.
@@ -12,7 +14,8 @@ const cache = new Map<string, MeshLambertMaterial>();
 export function paint(color: string) {
   let material = cache.get(color);
   if (!material) {
-    material = new MeshLambertMaterial({ color, flatShading: true });
+    // Cloud shadows pass over it too; the ground colours also get sand, grass or dirt detail.
+    material = weathered(new MeshLambertMaterial({ color, flatShading: true }), { surface: GROUND_OF[color] });
     cache.set(color, material);
   }
   return material;

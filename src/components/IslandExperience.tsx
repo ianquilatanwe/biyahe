@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { sound } from "@/lib/sound";
 import { stops } from "@/lib/stops";
 import { parkingSpot, type Point } from "@/lib/world";
 import { Loading } from "./ui/Loading";
@@ -46,6 +47,14 @@ export function IslandExperience() {
     return () => observer.disconnect();
   }, []);
 
+  // The island's sound pauses while it's scrolled away or the tab is hidden.
+  useEffect(() => {
+    const update = () => sound.setAudible(onScreen && document.visibilityState === "visible");
+    update();
+    document.addEventListener("visibilitychange", update);
+    return () => document.removeEventListener("visibilitychange", update);
+  }, [onScreen]);
+
   const goTo = useCallback((d: Destination) => {
     destination.current = d;
     setMoved(true);
@@ -65,6 +74,7 @@ export function IslandExperience() {
     const onKey = (e: KeyboardEvent) => {
       if (!isPlainKey(e) || !onScreen) return;
       if (e.code === "KeyE" && nearId && !openId) openStop(nearId);
+      if (e.code === "KeyH" && !e.repeat) sound.horn();
       if (/^(Key[WASD]|Arrow)/.test(e.code)) setMoved(true);
     };
     window.addEventListener("keydown", onKey);
@@ -114,7 +124,7 @@ export function IslandExperience() {
             className={`plate bg-paper px-3 py-1 text-sm font-medium transition-opacity duration-500 motion-reduce:transition-none ${moved ? "opacity-0" : ""}`}
           >
             <span className="hidden md:inline">
-              Drive with <Key>W</Key> <Key>A</Key> <Key>S</Key> <Key>D</Key> or the arrows, <Key>Space</Key> to brake, or click the ground
+              Drive with <Key>W</Key> <Key>A</Key> <Key>S</Key> <Key>D</Key> or the arrows, <Key>Space</Key> to brake, <Key>H</Key> to honk, or click the ground
             </span>
             <span className="md:hidden">Tap the ground to drive there</span>
           </p>

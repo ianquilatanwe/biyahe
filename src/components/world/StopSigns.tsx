@@ -8,7 +8,7 @@ import { stops } from "@/lib/stops";
 import { LANDMARKS } from "@/lib/world";
 
 /** How high each sign floats: just above the roof. The lighthouse's sits halfway up, or it's off the top of the screen. */
-const HEIGHT: Record<string, number> = { fashionhub: 3.6, sprig: 3.3, lumenfold: 5, recipes: 3.6, about: 3.4 };
+const HEIGHT: Record<string, number> = { fashionhub: 3.6, sprig: 3.3, lumenfold: 5, bagyo: 5, recipes: 3.6, about: 3.4 };
 
 const at = new Vector3();
 const base = new Vector3();

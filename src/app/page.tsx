@@ -1,6 +1,7 @@
 import { IslandExperience } from "@/components/IslandExperience";
 import { DownIcon, OutIcon } from "@/components/ui/icons";
 import { EndFlag, Road, Stripes } from "@/components/ui/RoadPaint";
+import { SoundToggle } from "@/components/ui/SoundToggle";
 import { StopDetails } from "@/components/ui/StopDetails";
 import { stopLabel, stops, UPWORK } from "@/lib/stops";
 
@@ -26,7 +27,7 @@ export default function Home() {
               </h1>
               <span aria-hidden="true" className="h-5 w-0.5 bg-ink" />
               <p className="text-sm leading-tight font-medium">
-                Ian Quilatan<span className="hidden sm:inline">, frontend developer</span>
+                Ian Joseph Quilatan<span className="hidden sm:inline">, frontend developer</span>
               </p>
             </div>
             <div className="pointer-events-auto flex gap-1.5 sm:gap-2">
@@ -42,6 +43,8 @@ export default function Home() {
                 <OutIcon />
                 <span className="sr-only"> (Upwork, opens in a new tab)</span>
               </a>
+              {/* Last, so "skip the island" stays the first Tab stop. */}
+              <SoundToggle />
             </div>
           </div>
           <IslandExperience />

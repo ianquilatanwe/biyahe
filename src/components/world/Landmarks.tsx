@@ -1,12 +1,13 @@
 "use client";
 
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { BufferAttribute, ConeGeometry, type Group } from "three";
+import { AdditiveBlending, CanvasTexture, ConeGeometry, DoubleSide, ShaderMaterial, Vector3, type Group, type SpriteMaterial } from "three";
 import { stops } from "@/lib/stops";
 import { coastRadius, GRASS_RADIUS, LANDMARKS, OBSTACLES, SHED, stopPosition } from "@/lib/world";
 import { Batched, type Batch, type Vec } from "./Batched";
 import { useCalm } from "./useCalm";
+import { WIND } from "./weather";
 
 // The island's shared palette. Colours live in the merged mesh's vertices, so adding one costs no draw call.
 const WOOD = "#8a5a3b";
@@ -30,6 +31,7 @@ const PINK = "#e85d75";
 const ROCK = "#8d8a83";
 const ROCK_DARK = "#6f6c66";
 const TRUNK = "#9b7653";
+const TRUNK_RING = "#7f6045";
 const COCONUT = "#6b4a2b";
 const BAMBOO = "#d9c27a";
 const TYRE = "#1f1f24";
@@ -38,6 +40,10 @@ const LINE = "#fbf6ea";
 const FLAGS = [RED, YELLOW, BLUE, WHITE, TEAL, ORANGE];
 
 const rad = (deg: number) => (deg * Math.PI) / 180;
+
+/** Where the weather station's mast stands in its landmark frame, and how tall it is (the cups spin on top). */
+const MAST: Vec = [0.5, 0, -1.9];
+const MAST_HEIGHT = 7;
 
 /**
  * Each landmark is drawn in its own little frame: the origin is its spot on the stop ring, +z faces
@@ -102,6 +108,56 @@ const LANDMARK_MODELS: Record<string, (b: Batch) => void> = {
     for (const y of [3.0, 4.6]) b.box(DARK, [0.3, 0.4, 0.06], [0, y, -0.62 + (y - 3) * 0.05]);
   },
 
+  // Bagyo: a weather station. A braced lattice mast with typhoon signal flags on its yard and a wind vane, a small
+  // office, and a white louvred instrument box on legs. The wind cups on top are drawn separately (they spin).
+  bagyo(b) {
+    b.shadow([0, -1.5], [2.1, 1.8], 3);
+    b.flat(() => b.box(CONCRETE, [3.8, 0.12, 3.0], [0, 0.06, -1.5]));
+    const [mx, , mz] = MAST;
+    const leg = (i: number, y: number): Vec => {
+      const a = (i * 2 * Math.PI) / 3 + 0.3, r = 0.5 - (0.4 * y) / MAST_HEIGHT; // three legs leaning in
+      return [mx + Math.sin(a) * r, y, mz + Math.cos(a) * r];
+    };
+    for (let i = 0; i < 3; i++) {
+      strut(b, STEEL, leg(i, 0.1), leg(i, MAST_HEIGHT), 0.07);
+      for (let y = 0.4; y < MAST_HEIGHT - 0.5; y += 1.05) {
+        strut(b, STEEL, leg(i, y), leg(i + 1, y), 0.035);
+        strut(b, STEEL, leg(i, y), leg(i + 1, y + 1.05), 0.03); // zigzag bracing
+      }
+    }
+    b.cyl(DARK, [0.28, 0.28, 0.06], [mx, MAST_HEIGHT + 0.03, mz], undefined, 8);
+    b.cyl(STEEL, [0.03, 0.03, 0.6], [mx, MAST_HEIGHT + 0.3, mz], undefined, 6); // spindle for the cups
+    // The yard, a wind vane off its left end, and two typhoon flags (red, black square) hoisted on the right.
+    b.box(STEEL, [1.7, 0.05, 0.05], [mx, 5.6, mz]);
+    b.box(STEEL, [0.9, 0.03, 0.03], [mx - 0.85, 6.15, mz]);
+    b.box(STEEL, [0.03, 0.55, 0.03], [mx - 0.85, 5.9, mz]);
+    b.cone(RED, 0.08, 0.22, [mx - 1.38, 6.15, mz], [0, 0, Math.PI / 2], 4);
+    b.box(RED, [0.25, 0.2, 0.02], [mx - 0.42, 6.15, mz]);
+    for (const top of [5.55, 4.95]) {
+      b.place([mx + 0.8, top, mz], 0, () =>
+        b.sway(0.14, 1, () => {
+          b.box(RED, [0.48, 0.48, 0.02], [0.26, -0.25, 0]);
+          b.box(DARK, [0.2, 0.2, 0.035], [0.26, -0.25, 0]);
+        }),
+      );
+    }
+    b.box(DARK, [0.012, 1.1, 0.012], [mx + 0.8, 5.0, mz]); // halyard
+    // Office: cream walls, blue roof, a dish on top.
+    b.box(CREAM, [1.5, 1.4, 1.5], [-0.95, 0.82, -1.6]);
+    b.box(BLUE, [1.75, 0.08, 1.8], [-0.95, 1.58, -1.6], [0.1, 0, 0]);
+    b.box(WOOD_DARK, [0.45, 0.95, 0.05], [-0.65, 0.6, -0.83]);
+    b.box(DARK, [0.45, 0.35, 0.05], [-1.35, 0.95, -0.83]);
+    b.box(WHITE, [1.1, 0.22, 0.05], [-0.95, 1.36, -0.82]);
+    b.box(BLUE, [0.9, 0.05, 0.06], [-0.95, 1.36, -0.79]);
+    b.cyl(STEEL, [0.03, 0.03, 0.3], [-1.3, 1.78, -1.9], undefined, 5);
+    b.cyl(WHITE, [0.22, 0.04, 0.08], [-1.3, 1.95, -1.9], [0.6, 0, 0], 10);
+    // Instrument box: white, louvred, on four legs, with a slanted lid.
+    for (const x of [1.13, 1.57]) for (const z of [-0.3, -0.7]) b.box(STEEL, [0.04, 1.0, 0.04], [x, 0.6, z]);
+    b.box(WHITE, [0.55, 0.55, 0.5], [1.35, 1.35, -0.5]);
+    for (let k = 0; k < 4; k++) b.box(ZINC, [0.48, 0.025, 0.03], [1.35, 1.15 + k * 0.12, -0.24]);
+    b.box(WHITE, [0.65, 0.05, 0.62], [1.35, 1.66, -0.5], [0.12, 0, 0]);
+  },
+
   // Recipe Finder: a carinderia, a roadside eatery with pots of food on the counter and plastic stools.
   recipes(b) {
     b.shadow([0, -1.6], [2.4, 1.9], 2.5);
@@ -138,6 +194,15 @@ const LANDMARK_MODELS: Record<string, (b: Batch) => void> = {
   },
 };
 
+/** A thin bar from `p` to `q` (in the current frame): mast legs, braces, strings, frond spines. Square unless `width` is given (leaflets). */
+function strut(b: Batch, color: string, p: Vec, q: Vec, thickness: number, width = thickness) {
+  const run = Math.hypot(q[0] - p[0], q[2] - p[2]);
+  const mid: Vec = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2, (p[2] + q[2]) / 2];
+  b.place(mid, Math.atan2(q[0] - p[0], q[2] - p[2]), () =>
+    b.box(color, [width, thickness, Math.hypot(run, q[1] - p[1])], [0, 0, 0], [-Math.atan2(q[1] - p[1], run), 0, 0]),
+  );
+}
+
 /**
  * Banderitas: a string of little triangle flags in fiesta colours, sagging between two points (in the
  * current frame). The string is short boxes along the curve; each flag hangs point-down below it.
@@ -146,17 +211,13 @@ function banderitas(b: Batch, from: Vec, to: Vec, sag: number, flags = 10) {
   const at = (t: number): Vec => [from[0] + (to[0] - from[0]) * t, from[1] + (to[1] - from[1]) * t - sag * 4 * t * (1 - t), from[2] + (to[2] - from[2]) * t];
   const yaw = Math.atan2(to[0] - from[0], to[2] - from[2]);
   const n = flags * 2;
-  for (let i = 0; i < n; i++) {
-    const p = at(i / n);
-    const q = at((i + 1) / n);
-    const run = Math.hypot(q[0] - p[0], q[2] - p[2]);
-    const mid: Vec = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2, (p[2] + q[2]) / 2];
-    b.place(mid, yaw, () => b.box(DARK, [0.02, 0.02, Math.hypot(run, q[1] - p[1])], [0, 0, 0], [-Math.atan2(q[1] - p[1], run), 0, 0]));
-  }
+  for (let i = 0; i < n; i++) strut(b, DARK, at(i / n), at((i + 1) / n), 0.02);
   for (let i = 0; i < flags; i++) {
     const p = at((i + 0.5) / flags);
-    // A three-sided cone, squashed flat and turned point-down: a triangle flag facing across the string.
-    b.place(p, yaw + Math.PI / 2, () => b.add(FLAGS[i % FLAGS.length], new ConeGeometry(0.13, 0.26, 3), [0, -0.14, 0], [Math.PI, 0, 0], [1, 1, 0.15]));
+    // A three-sided cone, squashed flat and turned point-down: a triangle flag facing across the string. Its tip flutters.
+    b.place(p, yaw + Math.PI / 2, () =>
+      b.sway(0.25, 1, () => b.add(FLAGS[i % FLAGS.length], new ConeGeometry(0.13, 0.26, 3), [0, -0.14, 0], [Math.PI, 0, 0], [1, 1, 0.15])),
+    );
   }
 }
 
@@ -223,9 +284,9 @@ function tufts(b: Batch) {
     const at: Vec = [Math.sin(a) * r, 0, Math.cos(a) * r];
     if (OBSTACLES.some((o) => Math.hypot(o.x - at[0], o.z - at[2]) < o.r + 0.5)) continue;
     // Three thin blades leaning apart.
-    b.place(at, rnd() * 6, () => {
+    b.place(at, rnd() * 6, () => b.sway(0.4, 2, () => {
       for (let k = 0; k < 3; k++) b.cone(GRASS_TUFT, 0.045, 0.3, [Math.sin(k * 2.1) * 0.06, 0.13, Math.cos(k * 2.1) * 0.06], [Math.cos(k * 2.1) * 0.35, 0, -Math.sin(k * 2.1) * 0.35], 3);
-    });
+    }));
     if (i % 7 === 0) b.ball(i % 2 ? PINK : YELLOW, 0.06, [at[0] + 0.12, 0.2, at[2]]);
   }
 }
@@ -243,9 +304,29 @@ function onSand(angle: number, inset: number) {
   return [Math.sin(a) * r, 0, Math.cos(a) * r] as [number, number, number];
 }
 
+/**
+ * One palm frond, pointing along +z from the crown: a spine that arches up then droops towards its tip, in five
+ * segments, with two pairs of leaflets hanging off each, shorter towards the tip.
+ */
+function frond(b: Batch, color: string) {
+  let p: Vec = [0, 0, 0];
+  for (let i = 0; i < 5; i++) {
+    const droop = -0.3 + i * 0.32; // radians below level: rises a little, then bends down
+    const q: Vec = [0, p[1] - Math.sin(droop) * 0.4, p[2] + Math.cos(droop) * 0.4];
+    strut(b, color, p, q, 0.05, 0.07);
+    const reach = 0.5 - i * 0.07;
+    for (const t of [0.25, 0.75]) {
+      const at: Vec = [0, p[1] + (q[1] - p[1]) * t, p[2] + (q[2] - p[2]) * t];
+      for (const side of [-1, 1]) strut(b, color, at, [side * reach, at[1] - 0.16, at[2] + 0.14], 0.02, 0.15);
+    }
+    p = q;
+  }
+}
+
 /** A coconut palm: a curved trunk leaning out to sea, six drooping fronds and a few coconuts. */
 function palm(b: Batch, angle: number, inset: number, height: number) {
-  b.place(onSand(angle, inset), rad(angle) - Math.PI / 2, () => {
+  // The crown sways ~12 cm in the wind, the foot not at all (k · height², from the palm's foot).
+  b.place(onSand(angle, inset), rad(angle) - Math.PI / 2, () => b.sway(0.12 / (height * height), 2, () => {
     let x = 0;
     let y = 0;
     const segments = 5;
@@ -257,13 +338,12 @@ function palm(b: Batch, angle: number, inset: number, height: number) {
       b.cyl(TRUNK, [0.15 - i * 0.015, 0.2 - i * 0.015, len + 0.05], [cx, cy, 0], [0, 0, -lean], 6);
       x += Math.sin(lean) * len;
       y += Math.cos(lean) * len;
+      if (i < segments - 1) b.cyl(TRUNK_RING, [0.17 - i * 0.015, 0.17 - i * 0.015, 0.07], [x, y, 0], [0, 0, -lean], 6); // the ring where each year's fronds fell
     }
-    for (let k = 0; k < 6; k++) {
-      b.place([x, y, 0], (k * Math.PI) / 3 + 0.3, () => b.box(k % 2 ? LEAF : LEAF_DARK, [0.42, 0.05, 1.8], [0, -0.25, 0.85], [0.42, 0, 0]));
-    }
+    for (let k = 0; k < 6; k++) b.place([x, y, 0], (k * Math.PI) / 3 + 0.3, () => frond(b, k % 2 ? LEAF : LEAF_DARK));
     b.shadow([x, 0], [1.4, 1.4], 1.5);
     for (let k = 0; k < 3; k++) b.ball(COCONUT, 0.13, [x + Math.sin(k * 2.1) * 0.18, y - 0.18, Math.cos(k * 2.1) * 0.18]);
-  });
+  }));
 }
 
 /** Everything that never moves, merged into one mesh per colour. */
@@ -274,8 +354,8 @@ function buildScenery(b: Batch) {
   }
   // Palms along the beach, kept clear of the stops.
   [
-    [35, 1.2, 4.2], [52, 1.6, 3.6], [112, 1.3, 4.4], [128, 1.8, 3.4], [178, 1.2, 4.0], [-165, 1.5, 3.8],
-    [-112, 1.3, 4.3], [-95, 1.7, 3.5], [-40, 1.2, 4.0], [-22, 1.6, 3.4], [96, 1.4, 3.8], [-4, 1.5, 3.6],
+    [35, 1.2, 4.2], [52, 1.6, 3.6], [112, 1.3, 4.4], [150, 1.8, 3.4], [158, 1.2, 4.0], [-160, 1.5, 3.8],
+    [-110, 1.3, 4.3], [-82, 1.7, 3.5], [-40, 1.2, 4.0], [-22, 1.6, 3.4], [96, 1.4, 3.8], [-4, 1.5, 3.6],
   ].forEach(([angle, inset, height]) => palm(b, angle, inset, height));
   // Rocks at the waterline and out in the shallows.
   [
@@ -312,32 +392,101 @@ function buildBangka(b: Batch) {
 const lighthouse = frameOf(stops.find((s) => s.id === "lumenfold")!.angle);
 const pier = frameOf(stops.find((s) => s.id === "about")!.angle);
 
-/** One side of the lighthouse beam: an open cone that fades out towards its wide end (alpha per vertex). */
-function beamGeometry() {
-  const length = 7;
-  const g = new ConeGeometry(0.9, length, 12, 1, true);
-  const pos = g.attributes.position;
-  const rgba = new Float32Array(pos.count * 4);
-  for (let i = 0; i < pos.count; i++) rgba.set([1, 1, 1, 0.3 * (0.5 + pos.getY(i) / length)], i * 4); // 0.3 at the lamp, 0 at the end
-  g.setAttribute("color", new BufferAttribute(rgba, 4));
-  return g;
+const station = frameOf(stops.find((s) => s.id === "bagyo")!.angle);
+
+/** The wind cups on top of the weather mast: three arms, a cup on each, turned to catch the wind. */
+function buildCups(b: Batch) {
+  b.cyl(DARK, [0.06, 0.06, 0.1], [0, 0, 0], undefined, 8);
+  for (let i = 0; i < 3; i++) {
+    b.place([0, 0, 0], (i * 2 * Math.PI) / 3, () => {
+      b.box(STEEL, [0.025, 0.025, 0.32], [0, 0, 0.16]);
+      b.cyl(WHITE, [0.09, 0.05, 0.13], [0, 0, 0.34], [0, 0, Math.PI / 2], 8);
+    });
+  }
 }
-const BEAM = beamGeometry();
+
+const BEAM_LENGTH = 7;
+const BEAM = new ConeGeometry(0.9, BEAM_LENGTH, 16, 1, true);
+
+/**
+ * The lighthouse beam's shader: brightest at the lamp and fading out along its length, soft at its edges
+ * (where you look across the cone's side instead of through it, it fades, so it reads as a shaft of light,
+ * not a plastic cone), with faint dust drifting out along it. Additive, so it only ever brightens what's behind.
+ */
+const beamMaterial = () =>
+  new ShaderMaterial({
+    uniforms: { uTime: WIND, uColor: { value: new Vector3(1, 0.93, 0.74) } },
+    vertexShader: /* glsl */ `
+      varying float vAlong;
+      varying float vFacing;
+      void main() {
+        vAlong = 0.5 + position.y / ${BEAM_LENGTH.toFixed(1)}; // 1 at the lamp (the cone's tip), 0 at the far end
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        vFacing = abs(dot(normalize(normalMatrix * normal), normalize(-mv.xyz)));
+        gl_Position = projectionMatrix * mv;
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform float uTime;
+      uniform vec3 uColor;
+      varying float vAlong;
+      varying float vFacing;
+      void main() {
+        float dust = 0.85 + 0.15 * sin(vAlong * 40.0 + uTime * 3.0) * sin(vAlong * 17.0 - uTime * 1.3);
+        float a = vAlong * vAlong * smoothstep(0.0, 0.7, vFacing) * dust * 0.32;
+        gl_FragColor = vec4(uColor * a, 1.0);
+      }
+    `,
+    transparent: true,
+    blending: AdditiveBlending,
+    depthWrite: false,
+    side: DoubleSide,
+  });
+
+/** A soft round glow (white centre fading to clear), drawn once into a small canvas: the lamp's halo. */
+function glowTexture() {
+  const c = document.createElement("canvas");
+  c.width = c.height = 64;
+  const g = c.getContext("2d")!;
+  const fill = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  fill.addColorStop(0, "rgba(255,246,216,1)");
+  fill.addColorStop(0.25, "rgba(255,232,170,0.55)");
+  fill.addColorStop(1, "rgba(255,220,150,0)");
+  g.fillStyle = fill;
+  g.fillRect(0, 0, 64, 64);
+  return new CanvasTexture(c);
+}
+
+// The lamp in world space, and scratch vectors for the halo (no allocations in the frame loop).
+const LAMP = new Vector3(0, 7, -1.4).applyAxisAngle(new Vector3(0, 1, 0), lighthouse.yaw).add(new Vector3(...lighthouse.at));
+const beamAxis = new Vector3();
+const toCamera = new Vector3();
 
 /** The stops' landmarks, palms, rocks and props. A click on a landmark drives to that stop and opens it. */
 export function Landmarks({ onStop }: { onStop: (id: string) => void }) {
   const beam = useRef<Group>(null!);
   const boat = useRef<Group>(null!);
+  const cups = useRef<Group>(null!);
+  const halo = useRef<SpriteMaterial>(null!);
+  const beamShader = useMemo(beamMaterial, []);
+  const glow = useMemo(glowTexture, []);
   const calm = useCalm();
   // The "go" cursor goes on the canvas, not the page: scrolling away from a hovered landmark fires no
   // "pointer out", and a body cursor would then stick over the project list.
   const canvas = useThree((s) => s.gl.domElement);
   const setCursor = (c: string) => () => (canvas.style.cursor = c);
 
-  useFrame(({ clock }, delta) => {
-    if (calm.current) return; // reduced motion: the beam and the boat hold still
+  useFrame(({ clock, camera }, delta) => {
+    // The halo flares as the beam swings past the camera (either end of it: the beam shines both ways).
+    beamAxis.setFromMatrixColumn(beam.current.matrixWorld, 0).setY(0).normalize();
+    toCamera.copy(camera.position).sub(LAMP).setY(0).normalize();
+    halo.current.opacity = 0.35 + 0.65 * Math.abs(beamAxis.dot(toCamera)) ** 6;
+    if (calm.current) return; // reduced motion: the beam, the boat, the cups and the wind hold still
     const t = clock.elapsedTime;
-    beam.current.rotation.y += Math.min(delta, 1 / 20) * 0.9;
+    const dt = Math.min(delta, 1 / 20);
+    WIND.value += dt; // drives the swaying plants and flags, the cloud shadows and the beam's dust
+    cups.current.rotation.y -= dt * 5;
+    beam.current.rotation.y += dt * 0.9;
     boat.current.position.y = Math.sin(t * 1.3) * 0.06;
     boat.current.rotation.z = Math.sin(t * 1.1) * 0.04;
     boat.current.rotation.x = Math.sin(t * 0.9 + 1) * 0.02;
@@ -359,7 +508,7 @@ export function Landmarks({ onStop }: { onStop: (id: string) => void }) {
           onPointerOver={setCursor("var(--cursor-go)")}
           onPointerOut={setCursor("")}
         >
-          <cylinderGeometry args={[LANDMARKS[i].r, LANDMARKS[i].r, s.id === "lumenfold" ? 16 : 3, 8]} />
+          <cylinderGeometry args={[LANDMARKS[i].r, LANDMARKS[i].r, s.id === "lumenfold" || s.id === "bagyo" ? 16 : 3, 8]} />
           <meshBasicMaterial visible={false} />
         </mesh>
       ))}
@@ -370,12 +519,20 @@ export function Landmarks({ onStop }: { onStop: (id: string) => void }) {
           <cylinderGeometry args={[0.42, 0.42, 0.7, 10]} />
           <meshBasicMaterial color="#ffe38a" />
         </mesh>
+        <sprite position={[0, 7.0, -1.4]} scale={2.6}>
+          <spriteMaterial ref={halo} map={glow} blending={AdditiveBlending} depthWrite={false} transparent />
+        </sprite>
         <group ref={beam} position={[0, 7.0, -1.4]}>
           {[1, -1].map((side) => (
-            <mesh key={side} geometry={BEAM} position-x={side * 3.5} rotation-z={(side * Math.PI) / 2}>
-              <meshBasicMaterial color="#fff6d8" vertexColors transparent depthWrite={false} />
-            </mesh>
+            <mesh key={side} geometry={BEAM} material={beamShader} position-x={side * (BEAM_LENGTH / 2)} rotation-z={(side * Math.PI) / 2} />
           ))}
+        </group>
+      </group>
+
+      {/* The weather station's wind cups, spinning on top of its mast. */}
+      <group position={station.at} rotation-y={station.yaw}>
+        <group ref={cups} position={[MAST[0], MAST_HEIGHT + 0.6, MAST[2]]}>
+          <Batched build={buildCups} ao={false} />
         </group>
       </group>
 

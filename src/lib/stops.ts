@@ -1,6 +1,6 @@
 export const UPWORK = "https://www.upwork.com/freelancers/ianquilatan";
 
-/** The five stops around the island. Each one is a real project (or the "about" pier). */
+/** The six stops around the island. Each one is a real project (or the "about" pier). */
 export type Stop = {
   id: string;
   name: string; // shown on the jeepney's route sign
@@ -28,7 +28,7 @@ export const stops: Stop[] = [
       { label: "Live site", href: "https://product-listing-demo-ten.vercel.app/" },
       { label: "Code", href: "https://github.com/ianquilatanwe/product-listing-demo" },
     ],
-    angle: 150,
+    angle: 130,
     shot: "/shots/fashionhub.jpg",
   },
   {
@@ -42,7 +42,7 @@ export const stops: Stop[] = [
       { label: "Live site", href: "https://landing-demo-rust-psi.vercel.app/" },
       { label: "Code", href: "https://github.com/ianquilatanwe/landing-demo" },
     ],
-    angle: 80,
+    angle: 70,
     shot: "/shots/sprig.jpg",
   },
   {
@@ -52,9 +52,26 @@ export const stops: Stop[] = [
     title: "Lumenfold motion demo",
     blurb: "A scroll-driven launch page for a made-up desk lamp: a pinned dusk-to-night scene and a shared-element finish picker.",
     stack: "Next.js · Motion · Tailwind CSS",
-    links: [],
-    angle: -140, // far side: a tall lighthouse on the camera side would hide the jeepney parked at it
+    links: [
+      { label: "Live site", href: "https://motion-demo-one.vercel.app/" },
+      { label: "Code", href: "https://github.com/ianquilatanwe/motion-demo" },
+    ],
+    angle: -125, // far side: a tall lighthouse on the camera side would hide the jeepney parked at it
     shot: "/shots/lumenfold.jpg",
+  },
+  {
+    id: "bagyo",
+    name: "Bagyo",
+    landmark: "Weather station",
+    title: "Bagyo typhoon demo",
+    blurb: "Scroll up into a typhoon drawn by one WebGL shader: rain and spiral clouds build through the five PAGASA signals, then the eye opens onto blue sky. Hold to call lightning; the sound is made in code.",
+    stack: "Next.js · WebGL2 shader · Web Audio",
+    links: [
+      { label: "Live site", href: "https://bagyo-three.vercel.app/" },
+      { label: "Code", href: "https://github.com/ianquilatanwe/bagyo" },
+    ],
+    angle: 180, // far side, straight behind the middle: the mast is tall
+    shot: "/shots/bagyo.jpg",
   },
   {
     id: "recipes",
@@ -67,7 +84,7 @@ export const stops: Stop[] = [
       { label: "Live web app", href: "https://recipe-finder-flutter.pages.dev/" },
       { label: "Code", href: "https://github.com/ianquilatanwe/recipe-finder-flutter" },
     ],
-    angle: -70,
+    angle: -65,
     shot: "/shots/recipes.jpg",
   },
   {

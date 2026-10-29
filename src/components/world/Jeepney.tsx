@@ -4,6 +4,7 @@ import { useImperativeHandle, useMemo, useRef, type Ref } from "react";
 import { ExtrudeGeometry, MeshLambertMaterial, PlaneGeometry, Shape, type Group } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { Batched, SoftShadow, type Batch, type Vec } from "./Batched";
+import { weathered } from "./weather";
 import { paint } from "./paint";
 import { makeRouteSign } from "./routeSign";
 import { ART, makeSideArt } from "./sideArt";
@@ -36,7 +37,7 @@ const TRACK = 0.86; // wheel centres either side of the middle
  * `x` is the outer face; the solid grows `depth` inwards from there.
  */
 function sideways(b: Batch, color: string, shape: Shape, x: number, depth: number) {
-  const g = new ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: 0.025, bevelSize: 0.025, bevelSegments: 1, curveSegments: 6 });
+  const g = new ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: 0.025, bevelSize: 0.025, bevelSegments: 2, curveSegments: 12 });
   // Turned so the outline's u runs along +z; the push then runs along -x, so the right side starts at its outer face.
   b.add(color, g, x > 0 ? [x, 0, 0] : [x + depth, 0, 0], [0, -Math.PI / 2, 0]);
 }
@@ -176,7 +177,7 @@ function SideArt() {
       for (let i = 0; i < uv.count; i++) uv.setY(i, (uv.getY(i) + (s > 0 ? 1 : 0)) / 2); // right side: top row of the canvas
       return g;
     };
-    return { geometry: mergeGeometries([side(1), side(-1)]), material: new MeshLambertMaterial({ map, alphaTest: 0.5 }) };
+    return { geometry: mergeGeometries([side(1), side(-1)]), material: weathered(new MeshLambertMaterial({ map, alphaTest: 0.5 })) };
   }, []);
   return <mesh geometry={geometry} material={material} />;
 }
@@ -219,11 +220,11 @@ export function Jeepney({ ref }: { ref?: Ref<JeepneyParts> }) {
           }}
         >
           <mesh rotation-z={Math.PI / 2} material={paint(TYRE)}>
-            <cylinderGeometry args={[WHEEL_R, WHEEL_R, 0.3, 12]} />
+            <cylinderGeometry args={[WHEEL_R, WHEEL_R, 0.3, 24]} />
           </mesh>
           {/* chrome hubcap with a bar across it, so you can see the wheels turn */}
           <mesh rotation-z={Math.PI / 2} position-x={x > 0 ? 0.16 : -0.16} material={paint(CHROME)}>
-            <cylinderGeometry args={[0.22, 0.22, 0.02, 10]} />
+            <cylinderGeometry args={[0.22, 0.22, 0.02, 20]} />
           </mesh>
           <mesh position-x={x > 0 ? 0.17 : -0.17} material={paint(TYRE)}>
             <boxGeometry args={[0.04, 0.46, 0.08]} />
@@ -237,7 +238,7 @@ export function Jeepney({ ref }: { ref?: Ref<JeepneyParts> }) {
         {/* Round headlamps on the fender fronts: unlit, so they read as lit in any light. */}
         {[0.8, -0.8].map((x) => (
           <mesh key={x} position={[x, 0.9, 2.56]} rotation-x={Math.PI / 2}>
-            <cylinderGeometry args={[0.12, 0.12, 0.06, 12]} />
+            <cylinderGeometry args={[0.12, 0.12, 0.06, 20]} />
             <meshBasicMaterial color="#fff6d5" />
           </mesh>
         ))}

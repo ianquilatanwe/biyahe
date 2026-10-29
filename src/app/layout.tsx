@@ -11,9 +11,9 @@ const siteUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
   ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
   : "http://localhost:3000";
 
-const title = "Biyahe – Ian Quilatan, Frontend Developer";
+const title = "Biyahe – Ian Joseph Quilatan, Frontend Developer";
 const description =
-  "Drive a jeepney around a small island to visit Ian Quilatan's projects: Next.js sites, a motion demo and a Flutter app. Or skip straight to the list.";
+  "Drive a jeepney around a small island to visit Ian Joseph Quilatan's projects: Next.js sites, a motion demo, a WebGL typhoon and a Flutter app. Or skip straight to the list.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

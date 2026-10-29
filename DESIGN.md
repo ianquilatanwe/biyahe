@@ -1,6 +1,6 @@
 ---
 name: Biyahe
-description: Ian Quilatan's portfolio as a jeepney loop round a low-poly island, its HTML painted like route signage.
+description: Ian Joseph Quilatan's portfolio as a jeepney loop round a low-poly island, its HTML painted like route signage.
 colors:
   ink: "#1d2433"
   sky: "#f6c9a1"
@@ -202,7 +202,7 @@ Tactile and pressable, like a painted board you push.
 - **Focus:** the global ring, 3px ink outline at 2px offset plus a 6px yellow halo, so it shows on red, on sky and on the island.
 
 ### Plates (labels)
-Same face and rim as a sign, no press: the header route plate ("Biyahe | Ian Quilatan, frontend developer", split by a 2px ink rule), the "Projects" heading, the driving hint (paper), key caps and the route-board stop numbers.
+Same face and rim as a sign, no press: the header route plate ("Biyahe | Ian Joseph Quilatan, frontend developer", split by a 2px ink rule), the "Projects" heading, the driving hint (paper), key caps and the route-board stop numbers.
 
 ### Ticket (project card)
 One component for the island's dialog and the route board, so they can't drift.

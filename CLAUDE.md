@@ -1,6 +1,6 @@
 # Biyahe: coding principles
 
-Ian's 3D portfolio home: drive a jeepney around an island to five project stops.
+Ian's 3D portfolio home: drive a jeepney around an island to six project stops.
 Next.js 15 + React 19 + three 0.186 + @react-three/fiber 9.8 + drei 10.7. Ian doesn't model:
 everything is built from code primitives (Ian chose code over Blender for the jeepney on 2026-10-28). Distilled from the `threejs-react-three-fiber`,
 `threejs-performance`, `camera-systems` and `codebase-design` skills; load them for detail.
@@ -44,9 +44,13 @@ everything is built from code primitives (Ian chose code over Blender for the je
 - Use `paint(color)` for the few separate low-poly meshes (wheels, ground): one shared Lambert material per colour.
 - **Static parts go through `Batched`** (`components/world/Batched.tsx`): a build function adds boxes, cylinders,
   rocks and extruded side-view outlines (`sideways()` in `Jeepney.tsx`: curved fenders, wheel arches), and they're
-  merged into ONE mesh with the colour in each vertex. The whole island (5 landmarks, palms, props, tufts) and the
+  merged into ONE mesh with the colour in each vertex. The whole island (6 landmarks, palms, props, tufts) and the
   jeepney body cost 2 draw calls each this way (parts + shadows); the whole frame is ~30. Only animated, unlit,
   textured (the jeepney's side art) or clickable ground parts (the road ring) are separate meshes.
+- **Detail lives in Batch's helpers**, so every model gets it: `box` bevels its edges (RoundedBoxGeometry, 1 segment;
+  bars under 3 cm stay plain), `cyl`/`cone` double the sides they're given (3–4-sided shapes like flags stay), balls are
+  12×8, rocks are subdivided and chipped. ~113k triangles a frame (was ~14k) at 60 fps; draw calls unchanged, since it
+  all still merges into one mesh. Triangles are cheap here; draw calls and full-screen passes are what cost on phones.
 - Baked shading lives in `Batch.add`: vertices darken towards the ground (fake ambient occlusion). Flat ground pieces
   (court lines, slabs) go inside `b.flat(...)`, floating things use `<Batched ao={false}>`, or they turn grey.
 - Soft shadows: `b.shadow(at, size, height)` inside a build adds a blurred disc, offset away from the sun; all of a
@@ -56,6 +60,18 @@ everything is built from code primitives (Ian chose code over Blender for the je
 - Click areas are invisible meshes (`<meshBasicMaterial visible={false} />`): raycast, but no draw call.
 - Tall things go on the far side of the island (angles near ±180): the camera looks from +z, so a tall
   landmark on the near side hides the jeepney parked at it.
+- **Weather lives in the shaders** (`weather.ts`): `weathered(material)` adds cloud shadows to a built-in material;
+  `VERTEX_PAINT` also sways what a build adds inside `b.sway(k, power, fn)` (k · distance^power from the current frame's
+  origin: a palm's foot, a flag's hoist). All of it, plus the sea and the beam's dust, runs on one clock, `WIND`,
+  advanced in `Landmarks` and frozen under reduced motion. New Lambert materials go through `paint()` or `weathered()`
+  so the clouds pass over them too.
+- **Surface detail is in the shader too** (`surfaces.ts`, no image files): a Batched part picks its surface from its paint
+  colour (`SURFACE_OF`; a new colour is plain paint until it's listed there) and carries its own coordinates in metres,
+  u along its longest side; the ground picks by colour (`GROUND_OF`) and uses world x/z. Patterns only multiply
+  brightness, and fade out (`surfFine`) before they get finer than a few pixels: the camera sees ~50 px per metre,
+  so keep detail at or below ~12 cycles per metre or it shimmers, then vanishes.
+- The sky is never in frame (the camera looks ~31° down; the sea fills the top of the screen), so "sky" effects
+  have to land on the ground or the water.
 - In shaders, vary colour by multiplying, not adding: a channel pushed below zero turns into NaN blotches
   after the sRGB step. The sea's foam uses the same `wobble()` formula as `world.ts`; keep them in step.
 - No real-time shadows: fake soft shadows with a dark transparent disc.
@@ -81,6 +97,14 @@ everything is built from code primitives (Ian chose code over Blender for the je
   its focus ring is drawn inside the button (yellow, inset), not the page's outer ring plus halo.
 - In-world sign tails keep their base flat on the plate edge and lean only the tip (CSS skew); rotating the whole
   tail lifts one end of the base off the plate.
+
+## Sound
+- `src/lib/sound.ts` is one module-level engine (Web Audio, no files): engine, sea, horn. Ian liked the idle as it is:
+  the moving layers (gears, sub-octave chug, exhaust, tyres) all fall back to zero when parked, so idle never changes.
+  Never chop a signal with a square wave after its last filter, and keep sub-bass oscillators triangle/sine: hard
+  edges there are the clicks Ian heard as "broken speaker" spikes (clip B). A/B listening: `catalog-video/tmp/biyahe/drive-audio.mjs` records a fixed drive to mp3 (clips in `sound-review/`, gitignored). On by default, but no
+  AudioContext exists until the first click/tap/key (`SoundToggle` in the header); paused while the island is
+  scrolled away or the tab is hidden. The frame loop feeds it numbers (`sound.update`), at most 20 updates a second.
 
 ## Accessibility and fallback
 - The HTML comes first: the name, the skip link and the full project list render without WebGL or JS.

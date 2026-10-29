@@ -14,7 +14,7 @@ Two audiences, equal priority:
 Both arrive cold, often on a phone, and give the page well under a minute before they decide.
 
 ## Product Purpose
-Biyahe is Ian Quilatan's portfolio home. Visitors drive a jeepney around a small low-poly island to five stops, each opening a project card, or skip straight to a plain project list. Success: the visitor sees real shipped work fast, remembers Ian, and reaches him on Upwork.
+Biyahe is Ian Joseph Quilatan's portfolio home. Visitors drive a jeepney around a small low-poly island to six stops, each opening a project card, or skip straight to a plain project list. Success: the visitor sees real shipped work fast, remembers Ian, and reaches him on Upwork.
 
 ## Positioning
 The island is itself the proof: a frontend developer showing craft, performance discipline and accessibility in a playful, Filipino-rooted piece (jeepney, sari-sari store, carinderia, bangka) rather than a template grid.
@@ -25,7 +25,7 @@ The island is itself the proof: a frontend developer showing craft, performance 
 
 ## Capabilities and Constraints
 - Next.js 15, React 19, Tailwind 4, three.js via React Three Fiber; everything 3D is built in code (no model files).
-- Five stops: FashionHub (sari-sari store), Sprig & Stone (plant nursery), Lumenfold (lighthouse, no live link yet), Recipe Finder (carinderia), Pier (about Ian).
+- Six stops: FashionHub (sari-sari store), Sprig & Stone (plant nursery), Lumenfold (lighthouse), Bagyo (weather station), Recipe Finder (carinderia), Pier (about Ian).
 - No new dependencies without telling Ian; phones first (draw-call and asset budgets in CLAUDE.md).
 
 ## Brand Commitments

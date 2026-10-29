@@ -5,9 +5,10 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { PerformanceMonitor } from "@react-three/drei";
 import { MathUtils, Vector3 } from "three";
 import { autopilot, NO_INPUT, step, type Car } from "@/lib/driving";
+import { sound } from "@/lib/sound";
 import { stops } from "@/lib/stops";
 import { tuning } from "@/lib/tuning";
-import { nearestStop, OBSTACLES } from "@/lib/world";
+import { coastRadius, nearestStop, OBSTACLES } from "@/lib/world";
 import type { Destination } from "../IslandExperience";
 import { Island } from "./Island";
 import { Jeepney, type JeepneyParts } from "./Jeepney";
@@ -73,11 +74,19 @@ function Driver({ driving, destination, onNear, onArrive }: DriverProps) {
       else {
         destination.current = null; // arrived (or gave up)
         // Open the card even after giving up: the visitor asked for that stop, and the card doesn't need the jeepney there.
-        if (trip.stopId) onArrive(trip.stopId);
+        if (trip.stopId) {
+          sound.horn(2); // beep-beep: "para po", this stop
+          onArrive(trip.stopId);
+        }
       }
     }
 
     const c = (car.current = step(car.current, input, dt, OBSTACLES));
+
+    // Sound: the engine follows speed and throttle; the sea gets louder near the water, on the side the water is.
+    const r = Math.hypot(c.x, c.z);
+    const toWater = coastRadius(Math.atan2(c.z, c.x)) - r;
+    sound.update(c.speed, input.throttle ? 1 : 0, 1 - Math.min(toWater / 14, 1), r ? c.x / r : 0);
 
     // Tell the page which stop is in range, only when it changes (a React update, not every frame).
     const id = nearestStop(c.x, c.z, stops)?.id ?? null;

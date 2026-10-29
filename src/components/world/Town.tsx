@@ -1,6 +1,7 @@
 "use client";
 
 import type { ThreeEvent } from "@react-three/fiber";
+import { TorusGeometry } from "three";
 import { reachable } from "@/lib/driving";
 import { stops } from "@/lib/stops";
 import { BLOCK_HALF, BLOCKS, EDGE, LOTS, OBSTACLES, SHORE_Z, site, STREET_HALF, STREETS, type Point } from "@/lib/world";
@@ -127,11 +128,16 @@ function plaza(b: Batch) {
     b.box(SIDEWALK, [2 * h, 0.04, 1.6], [0, 0.035, 0]);
     b.cyl(SIDEWALK, [3, 3, 0.05], [0, 0.04, 0], undefined, 16);
   });
-  b.cyl(SEAWALL, [2.2, 2.3, 0.5], [0, 0.25, 0], undefined, 16);
-  b.cyl(WATER, [1.9, 1.9, 0.06], [0, 0.47, 0], undefined, 16);
+  // Each basin: stone below, the water a clear 5 cm above it, and a stone rim lying over the water's edge. (Water level
+  // with the stone's top flickered between the two from frame to frame.) The water skips the baked ground darkening,
+  // which turned it grey.
+  b.cyl(SEAWALL, [2.2, 2.3, 0.4], [0, 0.2, 0], undefined, 16);
+  b.flat(() => b.cyl(WATER, [2.0, 2.0, 0.04], [0, 0.43, 0], undefined, 16));
+  b.add(SEAWALL, new TorusGeometry(2.06, 0.14, 6, 32), [0, 0.47, 0], [Math.PI / 2, 0, 0]);
   b.cyl(SEAWALL, [0.3, 0.45, 1.3], [0, 0.9, 0], undefined, 8);
   b.cyl(SEAWALL, [0.85, 0.35, 0.25], [0, 1.6, 0], undefined, 12); // the upper bowl
-  b.cyl(WATER, [0.75, 0.75, 0.04], [0, 1.72, 0], undefined, 12);
+  b.flat(() => b.cyl(WATER, [0.78, 0.78, 0.04], [0, 1.755, 0], undefined, 12));
+  b.add(SEAWALL, new TorusGeometry(0.8, 0.06, 6, 24), [0, 1.77, 0], [Math.PI / 2, 0, 0]);
   b.cyl(SEAWALL, [0.08, 0.12, 0.5], [0, 1.95, 0], undefined, 6);
   b.ball(SEAWALL, 0.12, [0, 2.25, 0]);
 

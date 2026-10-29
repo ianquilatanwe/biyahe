@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Biyahe Town Plan</title>
+<style>
+  :root {
+    --ink: #1d2433; --paper: #fffaf2; --sky: #f6c9a1; --sea: #0f5560; --red: #c41e30; --red-deep: #9e1426;
+    --yellow: #ffc93c; --muted: #4b3a2e; --line: #e4d6bf;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.55 system-ui, "Segoe UI", sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 32px 16px 80px; }
+  h1 { font-size: 34px; line-height: 1.1; margin: 0 0 6px; color: var(--red-deep); }
+  h2 { font-size: 22px; margin: 44px 0 10px; padding-bottom: 6px; border-bottom: 3px solid var(--ink); }
+  h3 { font-size: 18px; margin: 0 0 4px; }
+  p, li { max-width: 72ch; }
+  .status { display: inline-block; background: var(--yellow); border: 2px solid var(--ink); border-radius: 6px; padding: 2px 10px; font-weight: 600; font-size: 14px; }
+  .muted { color: var(--muted); }
+  .map { display: grid; grid-template-columns: minmax(0, 420px) 1fr; gap: 24px; align-items: start; }
+  .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+  .card { border: 3px solid var(--ink); border-radius: 12px; background: #fff; overflow: hidden; box-shadow: 0 5px 0 var(--ink); }
+  .card .strip { background: var(--red); color: #fff; font-weight: 700; font-size: 14px; padding: 6px 12px; }
+  .card svg { display: block; width: 100%; height: auto; background: linear-gradient(#fbe3cc, #f6c9a1 70%); border-bottom: 2px solid var(--ink); }
+  .card .body { padding: 12px 14px 16px; }
+  .card ul { padding-left: 18px; margin: 8px 0 0; }
+  .card li { margin: 3px 0; font-size: 15px; }
+  .tag { font-size: 13px; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: 15px; display: block; overflow-x: auto; }
+  code { overflow-wrap: anywhere; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: #f3e8d6; }
+  .wide svg { width: 100%; height: auto; border: 3px solid var(--ink); border-radius: 12px; background: linear-gradient(#fbe3cc, #f6c9a1 70%); }
+  ol.phases > li { margin-bottom: 10px; }
+  @media (max-width: 760px) { .map, .cards { grid-template-columns: 1fr; } h1 { font-size: 28px; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Biyahe: town by the bay</h1>
+  <p><span class="status">Draft plan for Ian · 2026-10-29 · nothing built yet</span></p>
+  <p>The jeepney leaves the island for where jeepneys actually live: a small Filipino town on a bay. A plaza, a jeepney
+  terminal at the pier, a loop of streets, and the six projects as real places along the route. Everything stays built
+  in code (no model files), in the same flat signboard palette, with the shaders and sound we already have.</p>
+
+  <h2>1. The town</h2>
+  <div class="map">
+    <svg viewBox="0 0 400 420" role="img" aria-label="Top-down map of the town: the bay along the top, a three by three grid of blocks with the plaza in the middle, the jeepney route looping round the plaza and along the bay, and the six numbered stops.">
+      <defs>
+        <pattern id="waves" width="16" height="8" patternUnits="userSpaceOnUse"><path d="M0 6 Q4 2 8 6 T16 6" fill="none" stroke="#bfeef0" stroke-width="1"/></pattern>
+      </defs>
+      <rect width="400" height="420" fill="#e9dcc0"/>
+      <rect width="400" height="42" fill="#3fb3b8"/><rect width="400" height="42" fill="url(#waves)"/>
+      <rect y="40" width="400" height="12" fill="#f1d9a7"/>
+      <!-- pier and bangka -->
+      <rect x="193" y="0" width="14" height="54" fill="#8a5a3b" stroke="#1d2433" stroke-width="1.5"/>
+      <path d="M214 14 h22 l-4 8 h-14 z" fill="#fff" stroke="#1d2433" stroke-width="1.2"/>
+      <!-- roads -->
+      <g fill="#3a4150">
+        <rect x="52" y="52" width="296" height="32"/><rect x="52" y="140" width="296" height="32"/>
+        <rect x="52" y="228" width="296" height="32"/><rect x="52" y="316" width="296" height="32"/>
+        <rect x="52" y="52" width="32" height="296"/><rect x="140" y="52" width="32" height="296"/>
+        <rect x="228" y="52" width="32" height="296"/><rect x="316" y="52" width="32" height="296"/>
+      </g>
+      <!-- blocks -->
+      <g stroke="#1d2433" stroke-width="1.5">
+        <rect x="84" y="84" width="56" height="56" fill="#d8cbb0"/><rect x="172" y="84" width="56" height="56" fill="#d8cbb0"/><rect x="260" y="84" width="56" height="56" fill="#d8cbb0"/>
+        <rect x="84" y="172" width="56" height="56" fill="#d8cbb0"/><rect x="172" y="172" width="56" height="56" fill="#8cc56b"/><rect x="260" y="172" width="56" height="56" fill="#d8cbb0"/>
+        <rect x="84" y="260" width="56" height="56" fill="#d8cbb0"/><rect x="172" y="260" width="56" height="56" fill="#d8cbb0"/><rect x="260" y="260" width="56" height="56" fill="#d8cbb0"/>
+      </g>
+      <!-- plaza -->
+      <path d="M200 176 V224 M176 200 H224" stroke="#f4ead5" stroke-width="5"/>
+      <circle cx="200" cy="200" r="9" fill="#5cc9c4" stroke="#1d2433" stroke-width="1.5"/>
+      <g fill="#3d7a3f"><circle cx="182" cy="182" r="5"/><circle cx="218" cy="182" r="5"/><circle cx="182" cy="218" r="5"/><circle cx="218" cy="218" r="5"/></g>
+      <!-- basketball court SE, shophouses SW -->
+      <rect x="268" y="270" width="40" height="36" fill="#c8643b" stroke="#fbf6ea" stroke-width="1.5"/>
+      <g fill="#f4ead5" stroke="#1d2433" stroke-width="1"><rect x="88" y="264" width="14" height="22"/><rect x="104" y="264" width="14" height="22"/><rect x="120" y="264" width="16" height="22"/><rect x="88" y="290" width="22" height="22"/><rect x="114" y="290" width="22" height="22"/></g>
+      <!-- jeepney route -->
+      <path d="M156 156 H244 V244 H156 Z M156 156 V68 H244 V156" fill="none" stroke="#c41e30" stroke-width="3.5" stroke-dasharray="9 6"/>
+      <!-- traffic -->
+      <g fill="#ffc93c" stroke="#1d2433" stroke-width="1"><rect x="62" y="200" width="10" height="6"/><rect x="290" y="236" width="10" height="6"/><rect x="120" y="322" width="10" height="6"/></g>
+      <!-- stops -->
+      <g font-family="system-ui, sans-serif" font-weight="700" font-size="13" text-anchor="middle">
+        <g><circle cx="200" cy="288" r="12" fill="#ffc93c" stroke="#1d2433" stroke-width="2"/><text x="200" y="293">1</text></g>
+        <g><circle cx="112" cy="200" r="12" fill="#ffc93c" stroke="#1d2433" stroke-width="2"/><text x="112" y="205">2</text></g>
+        <g><circle cx="288" cy="112" r="12" fill="#ffc93c" stroke="#1d2433" stroke-width="2"/><text x="288" y="117">3</text></g>
+        <g><circle cx="112" cy="112" r="12" fill="#ffc93c" stroke="#1d2433" stroke-width="2"/><text x="112" y="117">4</text></g>
+        <g><circle cx="288" cy="200" r="12" fill="#ffc93c" stroke="#1d2433" stroke-width="2"/><text x="288" y="205">5</text></g>
+        <g><circle cx="200" cy="112" r="12" fill="#c41e30" stroke="#1d2433" stroke-width="2"/><text x="200" y="117" fill="#fff">6</text></g>
+      </g>
+      <g font-family="system-ui, sans-serif" font-size="11" fill="#1d2433">
+        <text x="8" y="24" fill="#0f5560" font-weight="700">THE BAY</text>
+        <text x="268" y="66" fill="#fff">bay boulevard</text>
+        <text x="200" y="412" text-anchor="middle">▲ camera looks north, towards the bay</text>
+      </g>
+    </svg>
+    <div>
+      <ul>
+        <li><strong>Size:</strong> about 80 × 80 m of town (the island is 54 m across), a 3 × 3 grid of blocks with 8 m streets.</li>
+        <li><strong>The plaza</strong> sits in the middle block: fountain, four shade trees, benches, the town's heart.</li>
+        <li><strong>The jeepney route</strong> (red dashes) loops round the plaza and out along the bay boulevard past the terminal. Driving stays free: you can go anywhere on the streets, the route is just what the autopilot and the road paint follow.</li>
+        <li><strong>The bay</strong> runs along the top. The sea shader, foam, glints, cloud shadows and the pier all carry over.</li>
+        <li><strong>Tall things go north</strong> (top of the map, the far side from the camera), as now: Lumenfold's roof lamp (3) and Bagyo's mast (4) stand there. The south row stays low.</li>
+        <li><strong>The other blocks</strong> are ordinary town: shophouses, a sari-sari store on a corner, the basketball court, electric poles with their tangle of wires.</li>
+      </ul>
+      <table>
+        <tr><th>#</th><th>Stop</th><th>Becomes</th></tr>
+        <tr><td>1</td><td>FashionHub</td><td>Ukay-ukay boutique</td></tr>
+        <tr><td>2</td><td>Sprig &amp; Stone</td><td>Corner plant shop</td></tr>
+        <tr><td>3</td><td>Lumenfold</td><td>Lamp shop with a giant roof lamp</td></tr>
+        <tr><td>4</td><td>Bagyo</td><td>PAGASA weather office</td></tr>
+        <tr><td>5</td><td>Recipe Finder</td><td>Carinderia</td></tr>
+        <tr><td>6</td><td>About Ian</td><td>Jeepney terminal at the pier</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <h2>2. The six stops, reimagined</h2>
+  <p class="muted">Rough front sketches: proportions and ideas, not final art. Each stop gets one thing that moves, so it reads as alive from a distance.</p>
+  <div class="cards">
+
+    <article class="card">
+      <div class="strip">Stop 1 · FashionHub</div>
+      <svg viewBox="0 0 320 230" role="img" aria-label="Sketch: a two-storey teal shophouse with capiz windows upstairs, a yellow FashionHub sign, a striped awning over a display window with three mannequins, a half-open roll-up shutter, and a clothes rack on the sidewalk.">
+        <defs><pattern id="capiz" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="#f4ead5"/><path d="M0 0 H8 V8" fill="none" stroke="#8a5a3b" stroke-width="1"/></pattern></defs>
+        <rect y="200" width="320" height="30" fill="#d8cbb0"/>
+        <rect x="220" y="28" width="26" height="24" rx="3" fill="#1d4e89" stroke="#1d2433" stroke-width="2"/>
+        <rect x="55" y="50" width="210" height="10" fill="#f4ead5" stroke="#1d2433" stroke-width="2"/>
+        <rect x="60" y="60" width="200" height="140" fill="#2a9d8f" stroke="#1d2433" stroke-width="2.5"/>
+        <g stroke="#1d2433" stroke-width="2"><rect x="75" y="70" width="44" height="42" fill="url(#capiz)"/><rect x="138" y="70" width="44" height="42" fill="url(#capiz)"/><rect x="201" y="70" width="44" height="42" fill="url(#capiz)"/></g>
+        <rect x="90" y="118" width="140" height="18" fill="#ffc93c" stroke="#1d2433" stroke-width="2"/>
+        <text x="160" y="131" text-anchor="middle" font-family="system-ui" font-weight="800" font-size="10" fill="#9e1426">FASHIONHUB · UKAY</text>
+        <g stroke="#1d2433" stroke-width="1.5"><rect x="64" y="140" width="13" height="10" fill="#c41e30"/><rect x="77" y="140" width="13" height="10" fill="#fff"/><rect x="90" y="140" width="13" height="10" fill="#c41e30"/><rect x="103" y="140" width="13" height="10" fill="#fff"/><rect x="116" y="140" width="13" height="10" fill="#c41e30"/><rect x="129" y="140" width="13" height="10" fill="#fff"/><rect x="142" y="140" width="13" height="10" fill="#c41e30"/><rect x="155" y="140" width="13" height="10" fill="#fff"/><rect x="168" y="140" width="13" height="10" fill="#c41e30"/><rect x="181" y="140" width="13" height="10" fill="#fff"/></g>
+        <rect x="68" y="152" width="124" height="48" fill="#22313f" stroke="#1d2433" stroke-width="2"/>
+        <g stroke="#1d2433" stroke-width="1.5"><circle cx="96" cy="162" r="5" fill="#f4ead5"/><path d="M88 168 h16 l3 26 h-22 z" fill="#c41e30"/><circle cx="130" cy="162" r="5" fill="#f4ead5"/><path d="M122 168 h16 l3 26 h-22 z" fill="#ffc93c"/><circle cx="164" cy="162" r="5" fill="#f4ead5"/><path d="M156 168 h16 l3 26 h-22 z" fill="#1d4e89"/></g>
+        <rect x="202" y="152" width="48" height="26" fill="#a9b7bd" stroke="#1d2433" stroke-width="2"/>
+        <path d="M202 158 H250 M202 164 H250 M202 170 H250" stroke="#1d2433" stroke-width="1"/>
+        <rect x="206" y="178" width="40" height="22" fill="#2b2f3a"/>
+        <path d="M272 200 V158 M306 200 V158 M268 158 H310" stroke="#cfd6de" stroke-width="3"/>
+        <g stroke="#1d2433" stroke-width="1"><rect x="274" y="160" width="8" height="18" fill="#e85d75"/><rect x="284" y="160" width="8" height="20" fill="#ffc93c"/><rect x="294" y="160" width="8" height="16" fill="#2a9d8f"/></g>
+      </svg>
+      <div class="body">
+        <h3>Ukay-ukay boutique</h3>
+        <ul>
+          <li>Two-storey shophouse: shop below, capiz-shell windows above (bahay na bato style).</li>
+          <li>Display window with three mannequins, striped awning, roll-up shutter half open.</li>
+          <li><strong>Moves:</strong> clothes on the sidewalk rack swing in the wind (the sway shader).</li>
+          <li class="tag">South row, low (≈7 m). Footprint ≈ 8 × 6 m.</li>
+        </ul>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="strip">Stop 2 · Sprig &amp; Stone</div>
+      <svg viewBox="0 0 320 230" role="img" aria-label="Sketch: a cream corner shop with green trim, a balcony overflowing with hanging plants, a shade-net awning, tiers of potted plants on the sidewalk and a bamboo trellis with vines.">
+        <rect y="200" width="320" height="30" fill="#d8cbb0"/>
+        <rect x="50" y="62" width="200" height="138" fill="#f4ead5" stroke="#1d2433" stroke-width="2.5"/>
+        <rect x="45" y="56" width="210" height="10" fill="#4f9a4a" stroke="#1d2433" stroke-width="2"/>
+        <g fill="#3d7a3f" stroke="#1d2433" stroke-width="2"><rect x="70" y="74" width="34" height="40"/><rect x="133" y="74" width="34" height="40"/><rect x="196" y="74" width="34" height="40"/></g>
+        <rect x="40" y="116" width="220" height="6" fill="#8a5a3b" stroke="#1d2433" stroke-width="1.5"/>
+        <path d="M48 116 V104 M68 116 V104 M88 116 V104 M108 116 V104 M128 116 V104 M148 116 V104 M168 116 V104 M188 116 V104 M208 116 V104 M228 116 V104 M248 116 V104 M44 104 H256" stroke="#5e4331" stroke-width="2"/>
+        <g stroke="#1d2433" stroke-width="1.2"><path d="M60 122 v10 M100 122 v14 M140 122 v8 M180 122 v14 M220 122 v10" stroke="#5e4331"/>
+          <rect x="55" y="132" width="10" height="7" fill="#c8643b"/><circle cx="60" cy="130" r="6" fill="#4f9a4a"/><rect x="95" y="136" width="10" height="7" fill="#c8643b"/><circle cx="100" cy="134" r="7" fill="#3d7a3f"/><rect x="135" y="130" width="10" height="7" fill="#c8643b"/><circle cx="140" cy="128" r="6" fill="#73b357"/><rect x="175" y="136" width="10" height="7" fill="#c8643b"/><circle cx="180" cy="134" r="7" fill="#4f9a4a"/><rect x="215" y="132" width="10" height="7" fill="#c8643b"/><circle cx="220" cy="130" r="6" fill="#3d7a3f"/></g>
+        <rect x="40" y="146" width="220" height="8" fill="#2f6b3a" stroke="#1d2433" stroke-width="2"/>
+        <rect x="60" y="156" width="180" height="44" fill="#22313f" stroke="#1d2433" stroke-width="2"/>
+        <text x="150" y="173" text-anchor="middle" font-family="system-ui" font-weight="800" font-size="11" fill="#ffc93c">SPRIG &amp; STONE</text>
+        <g stroke="#1d2433" stroke-width="1.2"><rect x="4" y="186" width="44" height="14" fill="#8a5a3b"/><rect x="10" y="172" width="32" height="14" fill="#8a5a3b"/>
+          <circle cx="12" cy="182" r="6" fill="#4f9a4a"/><circle cx="26" cy="181" r="7" fill="#3d7a3f"/><circle cx="40" cy="182" r="6" fill="#73b357"/><circle cx="20" cy="167" r="6" fill="#e85d75"/><circle cx="33" cy="167" r="6" fill="#4f9a4a"/></g>
+        <path d="M268 200 V96 M284 200 V96 M300 200 V96 M262 120 H306 M262 150 H306" stroke="#d9c27a" stroke-width="4"/>
+        <g fill="#4f9a4a" stroke="#1d2433" stroke-width="1"><circle cx="270" cy="110" r="6"/><circle cx="290" cy="128" r="7"/><circle cx="276" cy="160" r="6"/><circle cx="298" cy="104" r="5"/><circle cx="296" cy="176" r="6"/></g>
+      </svg>
+      <div class="body">
+        <h3>Corner plant shop</h3>
+        <ul>
+          <li>Corner shophouse taken over by plants: a balcony of hanging pots, tiers of pots spilling onto the sidewalk.</li>
+          <li>Shade-net awning over the shopfront, a bamboo trellis with vines up the side wall.</li>
+          <li><strong>Moves:</strong> hanging pots and vines sway; a few leaves drift down.</li>
+          <li class="tag">West block, facing the plaza. ≈ 7 m tall.</li>
+        </ul>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="strip">Stop 3 · Lumenfold</div>
+      <svg viewBox="0 0 320 230" role="img" aria-label="Sketch: a narrow three-storey cream building with warmly glowing windows full of lamps, and a giant folding desk lamp on the roof shining a soft beam across the street.">
+        <rect y="200" width="320" height="30" fill="#d8cbb0"/>
+        <path d="M232 52 L320 150 L320 200 L250 200 Z" fill="#fff1c4" opacity="0.55"/>
+        <rect x="110" y="72" width="100" height="128" fill="#f4ead5" stroke="#1d2433" stroke-width="2.5"/>
+        <rect x="104" y="66" width="112" height="8" fill="#2b2f3a"/>
+        <g fill="#ffd36b" stroke="#1d2433" stroke-width="2"><rect x="122" y="82" width="30" height="26"/><rect x="168" y="82" width="30" height="26"/><rect x="122" y="116" width="30" height="26"/><rect x="168" y="116" width="30" height="26"/><rect x="118" y="152" width="84" height="48"/></g>
+        <g stroke="#1d2433" stroke-width="1.5" fill="#2b2f3a"><path d="M134 196 l6 -14 l8 6"/><path d="M160 196 l-4 -16 l10 4"/><path d="M184 196 l5 -12 l8 5"/></g>
+        <rect x="212" y="98" width="16" height="56" fill="#ffc93c" stroke="#1d2433" stroke-width="2"/>
+        <text x="220" y="126" text-anchor="middle" font-family="system-ui" font-weight="800" font-size="8" fill="#9e1426" transform="rotate(90 220 126)">LUMENFOLD</text>
+        <ellipse cx="160" cy="64" rx="18" ry="5" fill="#2b2f3a"/>
+        <path d="M160 62 L186 26 L222 42" fill="none" stroke="#2b2f3a" stroke-width="7" stroke-linecap="round"/>
+        <circle cx="186" cy="26" r="5" fill="#c41e30" stroke="#1d2433" stroke-width="1.5"/>
+        <path d="M214 34 L238 44 L228 62 Z" fill="#c41e30" stroke="#1d2433" stroke-width="2"/>
+        <circle cx="233" cy="54" r="5" fill="#fff6d8"/>
+      </svg>
+      <div class="body">
+        <h3>Lamp shop with a giant roof lamp</h3>
+        <ul>
+          <li>Narrow three-storey building, every window glowing warm and full of lamps.</li>
+          <li>A giant folding desk lamp on the roof, the Lumenfold lamp itself, as the landmark you see from across town.</li>
+          <li><strong>Moves:</strong> the lamp slowly turns and nods, sweeping a soft beam over the street (the lighthouse beam shader, reused).</li>
+          <li class="tag">North row (tall, far side). ≈ 11 m with the lamp.</li>
+        </ul>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="strip">Stop 4 · Bagyo</div>
+      <svg viewBox="0 0 320 230" role="img" aria-label="Sketch: a white two-storey PAGASA weather office with a blue band, a radar dome on the roof, a typhoon signal board by the door, an instrument box on legs, and a tall lattice mast with wind cups and two red typhoon flags.">
+        <rect y="200" width="320" height="30" fill="#d8cbb0"/>
+        <path d="M242 200 L254 20 L266 200" fill="none" stroke="#cfd6de" stroke-width="3"/>
+        <path d="M243 180 L265 160 L244 140 L263 120 L246 100 L261 80 L248 60 L259 40" fill="none" stroke="#cfd6de" stroke-width="1.6"/>
+        <path d="M240 46 H284" stroke="#cfd6de" stroke-width="3"/>
+        <g stroke="#1d2433" stroke-width="1.5"><rect x="270" y="48" width="18" height="18" fill="#c41e30"/><rect x="276" y="54" width="6" height="6" fill="#2b2f3a"/><rect x="270" y="70" width="18" height="18" fill="#c41e30"/><rect x="276" y="76" width="6" height="6" fill="#2b2f3a"/></g>
+        <path d="M246 16 H262 M254 12 V20" stroke="#2b2f3a" stroke-width="3"/><circle cx="246" cy="16" r="3" fill="#fff" stroke="#1d2433"/><circle cx="262" cy="16" r="3" fill="#fff" stroke="#1d2433"/>
+        <rect x="40" y="104" width="180" height="96" fill="#f7f4ee" stroke="#1d2433" stroke-width="2.5"/>
+        <rect x="40" y="144" width="180" height="8" fill="#1d4e89"/>
+        <g fill="#22313f" stroke="#1d2433" stroke-width="1.5"><rect x="54" y="114" width="28" height="22"/><rect x="96" y="114" width="28" height="22"/><rect x="138" y="114" width="28" height="22"/><rect x="180" y="114" width="28" height="22"/><rect x="54" y="160" width="28" height="22"/><rect x="138" y="160" width="28" height="22"/></g>
+        <rect x="96" y="162" width="30" height="38" fill="#5e4331" stroke="#1d2433" stroke-width="2"/>
+        <rect x="176" y="158" width="38" height="26" fill="#ffc93c" stroke="#1d2433" stroke-width="2"/>
+        <text x="195" y="169" text-anchor="middle" font-family="system-ui" font-weight="800" font-size="6.5" fill="#9e1426">SIGNAL</text><text x="195" y="180" text-anchor="middle" font-family="system-ui" font-weight="800" font-size="10" fill="#9e1426">No. 1</text>
+        <rect x="88" y="90" width="32" height="14" fill="#cfd6de" stroke="#1d2433" stroke-width="2"/>
+        <path d="M80 92 A24 24 0 0 1 128 92 Z" fill="#fff" stroke="#1d2433" stroke-width="2.5"/>
+        <path d="M14 200 V170 M34 200 V170" stroke="#cfd6de" stroke-width="2.5"/><rect x="10" y="150" width="28" height="22" fill="#fff" stroke="#1d2433" stroke-width="2"/><path d="M12 156 H36 M12 161 H36 M12 166 H36" stroke="#a9b7bd" stroke-width="1.2"/>
+      </svg>
+      <div class="body">
+        <h3>PAGASA weather office</h3>
+        <ul>
+          <li>White two-storey government office, blue band, a radar dome on the roof.</li>
+          <li>The lattice mast from today moves here, with its wind cups and red typhoon flags.</li>
+          <li>A typhoon signal board by the door that steps 1 → 5 when you park there, the same scale Bagyo scrolls through.</li>
+          <li><strong>Moves:</strong> cups spin, flags flutter, the radar dish rotates.</li>
+          <li class="tag">North row (tall mast, far side). ≈ 7 m, mast 13 m.</li>
+        </ul>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="strip">Stop 5 · Recipe Finder</div>
+      <svg viewBox="0 0 320 230" role="img" aria-label="Sketch: a single-storey carinderia with a big orange tarpaulin awning on poles, an open front with a yellow counter of steaming pots, a menu board, and blue plastic tables and stools on the sidewalk.">
+        <rect y="200" width="320" height="30" fill="#d8cbb0"/>
+        <rect x="50" y="96" width="200" height="104" fill="#f4ead5" stroke="#1d2433" stroke-width="2.5"/>
+        <rect x="44" y="88" width="212" height="10" fill="#a9b7bd" stroke="#1d2433" stroke-width="2"/>
+        <rect x="66" y="132" width="168" height="68" fill="#22313f" stroke="#1d2433" stroke-width="2"/>
+        <path d="M24 110 H276 L270 128 Q262 136 254 128 Q246 136 238 128 Q230 136 222 128 Q214 136 206 128 Q198 136 190 128 Q182 136 174 128 Q166 136 158 128 Q150 136 142 128 Q134 136 126 128 Q118 136 110 128 Q102 136 94 128 Q86 136 78 128 Q70 136 62 128 Q54 136 46 128 Q38 136 30 128 Z" fill="#e07a2e" stroke="#1d2433" stroke-width="2"/>
+        <path d="M28 128 V200 M272 128 V200" stroke="#cfd6de" stroke-width="3"/>
+        <rect x="66" y="170" width="168" height="30" fill="#ffc93c" stroke="#1d2433" stroke-width="2"/>
+        <g stroke="#1d2433" stroke-width="1.5" fill="#cfd6de"><rect x="80" y="158" width="22" height="12"/><rect x="114" y="158" width="22" height="12"/><rect x="148" y="158" width="22" height="12"/><rect x="182" y="158" width="22" height="12"/></g>
+        <g fill="none" stroke="#fff" stroke-width="1.8" opacity="0.85"><path d="M88 154 q-4 -6 0 -12 q4 -6 0 -12"/><path d="M126 154 q4 -6 0 -12 q-4 -6 0 -12"/><path d="M192 154 q-4 -6 0 -12 q4 -6 0 -12"/></g>
+        <rect x="206" y="138" width="24" height="20" fill="#2b2f3a" stroke="#1d2433" stroke-width="1.5"/><path d="M210 144 h16 M210 149 h12 M210 154 h14" stroke="#fff" stroke-width="1.2"/>
+        <g stroke="#1d2433" stroke-width="1.5"><rect x="282" y="180" width="30" height="5" fill="#1d4e89"/><path d="M286 185 V200 M308 185 V200" stroke="#1d4e89" stroke-width="3"/><rect x="2" y="186" width="14" height="4" fill="#1d4e89"/><path d="M5 190 V200 M13 190 V200" stroke="#1d4e89" stroke-width="2.5"/></g>
+      </svg>
+      <div class="body">
+        <h3>Carinderia</h3>
+        <ul>
+          <li>Single-storey eatery under a big scalloped tarpaulin awning on poles.</li>
+          <li>A counter of steel pots (ulam), a menu board, blue plastic tables and stools out on the sidewalk.</li>
+          <li><strong>Moves:</strong> steam curls up from the pots (a small particle sprite).</li>
+          <li class="tag">East block, facing the plaza. ≈ 5 m.</li>
+        </ul>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="strip">Last stop · About Ian</div>
+      <svg viewBox="0 0 320 230" role="img" aria-label="Sketch: a jeepney terminal with a long blue shed roof on posts, yellow route boards hanging under it, queue rails, a parked jeepney, and the bay with the pier and a bangka behind.">
+        <rect y="112" width="320" height="88" fill="#3fb3b8"/>
+        <rect x="150" y="128" width="20" height="72" fill="#8a5a3b"/>
+        <path d="M228 140 h40 l-6 10 h-28 z" fill="#fff" stroke="#1d2433" stroke-width="1.5"/>
+        <rect y="200" width="320" height="30" fill="#d8cbb0"/>
+        <path d="M14 104 L306 92 L306 104 L14 116 Z" fill="#1d4e89" stroke="#1d2433" stroke-width="2.5"/>
+        <path d="M24 114 V200 M108 111 V200 M200 107 V200 M296 103 V200" stroke="#cfd6de" stroke-width="4"/>
+        <g stroke="#1d2433" stroke-width="2"><rect x="34" y="122" width="62" height="14" fill="#ffc93c"/><rect x="118" y="119" width="72" height="14" fill="#ffc93c"/></g>
+        <g font-family="system-ui" font-weight="800" font-size="8" fill="#9e1426" text-anchor="middle"><text x="65" y="132">PLAZA · BAY</text><text x="154" y="129">TERMINAL · PIER</text></g>
+        <path d="M24 176 H100 M24 186 H100" stroke="#cfd6de" stroke-width="2.5"/>
+        <rect x="200" y="152" width="96" height="34" rx="4" fill="#cfd6de" stroke="#1d2433" stroke-width="2"/>
+        <rect x="200" y="148" width="96" height="6" fill="#c41e30" stroke="#1d2433" stroke-width="1.5"/>
+        <g fill="#22313f"><rect x="208" y="158" width="12" height="10"/><rect x="224" y="158" width="12" height="10"/><rect x="240" y="158" width="12" height="10"/><rect x="256" y="158" width="12" height="10"/></g>
+        <path d="M200 174 H296" stroke="#c41e30" stroke-width="2"/><path d="M200 178 H296" stroke="#ffc93c" stroke-width="2"/>
+        <circle cx="220" cy="188" r="8" fill="#1f1f24"/><circle cx="276" cy="188" r="8" fill="#1f1f24"/>
+      </svg>
+      <div class="body">
+        <h3>Jeepney terminal at the pier</h3>
+        <ul>
+          <li>Where every route starts and ends: a long shed roof, hanging route boards, queue rails.</li>
+          <li>Two or three parked jeepneys waiting for passengers; the pier and the bangka carry on behind it into the bay.</li>
+          <li><strong>Moves:</strong> a jeepney pulls out and loops the town now and then; the bangka rocks.</li>
+          <li class="tag">North centre, on the bay. Low (≈ 5 m) with the open bay behind.</li>
+        </ul>
+      </div>
+    </article>
+  </div>
+
+  <h2>3. The rest of the town</h2>
+  <div class="wide">
+    <svg viewBox="0 0 640 200" role="img" aria-label="Sketch: a street of mixed one- to three-storey shophouses in different colours with balconies, a water tank and an aircon unit, a sari-sari store on the corner, and an electric pole with a tangle of wires.">
+      <rect y="176" width="640" height="24" fill="#d8cbb0"/>
+      <g stroke="#1d2433" stroke-width="2">
+        <rect x="20" y="96" width="100" height="80" fill="#e85d75"/><rect x="120" y="60" width="90" height="116" fill="#f4ead5"/><rect x="210" y="110" width="110" height="66" fill="#ffc93c"/>
+        <rect x="320" y="76" width="96" height="100" fill="#5cc9c4"/><rect x="416" y="120" width="96" height="56" fill="#2a9d8f"/><rect x="512" y="88" width="110" height="88" fill="#f7f4ee"/>
+      </g>
+      <g fill="#22313f"><rect x="34" y="110" width="24" height="20"/><rect x="80" y="110" width="24" height="20"/><rect x="134" y="74" width="22" height="20"/><rect x="172" y="74" width="22" height="20"/><rect x="134" y="110" width="22" height="20"/><rect x="172" y="110" width="22" height="20"/><rect x="334" y="90" width="26" height="20"/><rect x="376" y="90" width="26" height="20"/><rect x="528" y="102" width="30" height="22"/><rect x="574" y="102" width="30" height="22"/></g>
+      <g fill="#2b2f3a"><rect x="40" y="146" width="40" height="30"/><rect x="140" y="146" width="40" height="30"/><rect x="340" y="140" width="56" height="36"/><rect x="430" y="140" width="68" height="36"/><rect x="540" y="140" width="50" height="36"/></g>
+      <rect x="226" y="132" width="78" height="30" fill="#2b2f3a" stroke="#1d2433" stroke-width="2"/><path d="M226 138 H304 M226 144 H304 M226 150 H304 M226 156 H304" stroke="#a9b7bd" stroke-width="1"/>
+      <rect x="216" y="118" width="98" height="12" fill="#c41e30" stroke="#1d2433" stroke-width="2"/><text x="265" y="127" text-anchor="middle" font-family="system-ui" font-weight="800" font-size="8" fill="#fff">SARI-SARI</text>
+      <path d="M118 134 H212" stroke="#5e4331" stroke-width="3"/><path d="M122 134 V124 M138 134 V124 M154 134 V124 M170 134 V124 M186 134 V124 M202 134 V124 M118 124 H212" stroke="#5e4331" stroke-width="1.5"/>
+      <rect x="140" y="38" width="22" height="22" rx="3" fill="#1d4e89" stroke="#1d2433" stroke-width="2"/><rect x="384" y="118" width="22" height="14" fill="#cfd6de" stroke="#1d2433" stroke-width="1.5"/>
+      <path d="M470 176 V30 M454 44 H486 M458 56 H482" stroke="#8a5a3b" stroke-width="4"/>
+      <path d="M0 50 Q120 74 230 54 Q350 36 454 44 M0 58 Q150 86 300 60 Q400 46 458 56 M486 44 Q560 60 640 40 M482 56 Q570 76 640 52 M470 60 Q520 90 600 70" fill="none" stroke="#1d2433" stroke-width="1.2"/>
+    </svg>
+  </div>
+  <ul>
+    <li><strong>Shophouses</strong> built from one generator: 1–3 storeys, a few colours, with or without balconies, signs, aircon units, water tanks. Seeded, so the town is the same every visit.</li>
+    <li><strong>Street life:</strong> electric poles with sagging wires (cheap lines), lampposts, a waiting shed, banderitas across one street, plants in pots by doors.</li>
+    <li><strong>Traffic:</strong> 3–4 tricycles and 1–2 other jeepneys on fixed loops. They slow behind you instead of crashing; you bump into them like props.</li>
+    <li><strong>Plaza:</strong> fountain (water shader), shade trees that sway, benches, a basketball court in the south-east block.</li>
+    <li><strong>Bay:</strong> seawall promenade with palms and a railing, the pier and bangka, the sea shader with glints and cloud shadows.</li>
+  </ul>
+
+  <h2>4. Keeping the jeepney in view</h2>
+  <ul>
+    <li>Buildings stay low (≤ 3 storeys) except the two landmarks on the far side, as the island already does.</li>
+    <li>Any building between the camera and the jeepney fades out with a soft dither (one uniform on the shared material, no extra draw calls), the way most city-builder games handle it.</li>
+    <li>The camera stays where it is now (12 up, 20 back) and may tilt a little steeper if the streets feel tight. That's a Leva slider to try before deciding.</li>
+  </ul>
+
+  <h2>5. Driving</h2>
+  <ul>
+    <li>Colliders gain rectangles (blocks, buildings) alongside today's circles (props, poles, parked vehicles).</li>
+    <li>The autopilot follows the street grid: it picks the shortest way through the intersections, then steers along it, instead of curving round obstacles. Tap-to-drive snaps your tap to the nearest street.</li>
+    <li>Top speed may rise a little (the town is bigger than the island), tuned with the existing sliders.</li>
+    <li><code>driving.check.ts</code> is rewritten for the grid: every stop reachable from 200 random spots, 500 random taps arrive, nothing gets stuck on a corner.</li>
+  </ul>
+
+  <h2>6. Performance budget</h2>
+  <table>
+    <tr><th>Measure</th><th>Today (island)</th><th>Budget (town)</th><th>How it stays there</th></tr>
+    <tr><td>Draw calls</td><td>~30</td><td>≤ 60</td><td>All static buildings, props and the plaza merge into one mesh (as now). Traffic shares one batched mesh per vehicle type.</td></tr>
+    <tr><td>Triangles</td><td>~113k</td><td>≤ 400k</td><td>Phones handle this easily. Shophouses are simple boxes with bevels; detail goes on the six stops.</td></tr>
+    <tr><td>Frame rate</td><td>60 fps</td><td>60 fps desktop, ≥ 50 phone</td><td>PerformanceMonitor still drops sharpness on slow phones. Checked with 4× CPU throttling and on your Redmi.</td></tr>
+    <tr><td>Download</td><td>116 kB first load, no model files</td><td>Same, no model files</td><td>Everything stays built in code; the 3D still loads after the page.</td></tr>
+    <tr><td>Per-pixel cost</td><td>sea + surfaces + clouds</td><td>+ building fade</td><td>No post-processing; one extra dither test per pixel.</td></tr>
+  </table>
+
+  <h2>7. What carries over, what changes</h2>
+  <table>
+    <tr><th>Keeps</th><th>Changes</th></tr>
+    <tr><td>Jeepney (model, feel, sound clip C), shaders (sea, glints, clouds, sway, surfaces), the HTML layer (header, stop buttons, cards, route board, signs), loader, no-WebGL fallback, reduced motion, stops data and screenshots.</td>
+    <td>World layout and colliders (<code>world.ts</code>), autopilot and its check, all landmark models, the ground (streets instead of sand and grass), sound gets a town bed (distant traffic, the odd horn, plaza chatter) next to the sea, README/copy ("island" → "town"), OG image and demo video retaken at the end.</td></tr>
+  </table>
+
+  <h2>8. Phases (a checkpoint clip after each)</h2>
+  <ol class="phases">
+    <li><strong>Blockout:</strong> the street grid, the bay edge, grey boxes for every building, rectangle colliders, the grid autopilot and its check, the building fade. You drive it before anything gets pretty.</li>
+    <li><strong>Town:</strong> the shophouse generator, plaza, seawall and pier, poles and wires, street props, ground surfaces.</li>
+    <li><strong>The six stops:</strong> each landmark built from its sketch, with its moving part, signs and footprints updated.</li>
+    <li><strong>Life and polish:</strong> traffic, town sound, performance and phone checks, accessibility, README, OG image, and deploy once you OK it.</li>
+  </ol>
+  <p class="muted">Roughly the same size as the original 4-day island build. The live site stays the island until the town is done and you approve it (the work happens on a branch).</p>
+
+  <h2>9. Questions for you</h2>
+  <ul>
+    <li><strong>Time of day:</strong> keep the late afternoon, or go dusk so Lumenfold's windows and the street lamps glow?</li>
+    <li><strong>Traffic:</strong> a few tricycles and jeepneys moving around (recommended), or a parked-only town?</li>
+    <li><strong>People:</strong> none (recommended for now), or a few simple figures at the plaza and terminal?</li>
+    <li><strong>Stop order:</strong> keep the current numbering, or renumber along the route as you'd drive it?</li>
+  </ul>
+</main>
+</body>
+</html>

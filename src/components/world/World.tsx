@@ -23,9 +23,9 @@ import { FOCUS } from "./weather";
 
 const SKY = "#f6c9a1";
 const START: Car = { x: -11, z: 24, yaw: Math.PI, speed: 0, yawRate: 0 }; // on the street west of FashionHub, facing north up the town
-// The camera aims no further south than this, so at the south street less of what lies past the town comes into view
-// (the jeepney drives on below the middle of the screen).
-const FOCUS_SOUTH = EDGE - 8;
+// The camera aims no nearer its own side of town than this (south when it looks north), so at the outer street less of
+// what lies past the town comes into view (the jeepney drives on below the middle of the screen).
+const FOCUS_EDGE = EDGE - 8;
 const GIVE_UP_AFTER = 20; // seconds: an unreachable destination never leaves the jeepney circling (driving.check.ts uses the same)
 const focusPoint = new Vector3();
 /** A vehicle the jeepney has been holding up toots once before it pulls round. */
@@ -36,12 +36,14 @@ type DriverProps = {
   driving: boolean;
   traffic: TrafficState;
   destination: RefObject<Destination | null>;
+  /** Quarter turns of the view, clockwise from looking north (any whole number: 1 east, -1 west). */
+  turns: RefObject<number>;
   onNear: (id: string | null) => void;
   onArrive: (stopId: string) => void;
 };
 
 /** Runs every frame: works out the input, moves the jeepney, reports the nearby stop, eases the camera. */
-function Driver({ driving, traffic, destination, onNear, onArrive }: DriverProps) {
+function Driver({ driving, traffic, destination, turns, onNear, onArrive }: DriverProps) {
   const parts = useRef<JeepneyParts>(null);
   const keys = useKeys(driving);
   const calm = useCalm();
@@ -55,6 +57,7 @@ function Driver({ driving, traffic, destination, onNear, onArrive }: DriverProps
   const target = useMemo(() => new Vector3(), []);
   const offset = useMemo(() => new Vector3(), []);
   const lean = useRef(0);
+  const heading = useRef(0); // which way the camera looks, radians clockwise from north, easing towards turns × 90°
   const near = useRef<string | null>(null);
   const route = useRef<string | null>(null);
   const tripTime = useRef(0);
@@ -97,11 +100,12 @@ function Driver({ driving, traffic, destination, onNear, onArrive }: DriverProps
 
     const c = (car.current = step(car.current, input, dt, traffic.obstacles)); // the blocks and the traffic
 
-    // Sound: the engine follows speed and throttle; the sea gets louder towards the bay (ahead, so no panning).
+    // Sound: the engine follows speed and throttle; the sea gets louder towards the bay, which is north: ahead when
+    // looking north (no panning), on the left when looking east, on the right when looking west.
     const toWater = c.z - SHORE_Z - 4; // 0 on the bay boulevard's kerb
     // The plaza's chatter is loudest beside it (its kerbs are 7 m out) and gone two blocks away.
     const plaza = 1 - Math.min(Math.max(Math.hypot(c.x, c.z) - 9, 0) / 22, 1);
-    sound.update(c.speed, input.throttle ? 1 : 0, 1 - Math.min(toWater / 16, 1), 0, plaza);
+    sound.update(c.speed, input.throttle ? 1 : 0, 1 - Math.min(toWater / 16, 1), -Math.sin(heading.current), plaza);
 
     // Tell the page which stop is in range, only when it changes (a React update, not every frame).
     const id = nearestStop(c.x, c.z, stops)?.id ?? null;
@@ -128,11 +132,19 @@ function Driver({ driving, traffic, destination, onNear, onArrive }: DriverProps
     p.body.position.y = calm.current ? 0 : Math.sin(clock.elapsedTime * 22) * tuning.bounce * Math.min(Math.abs(c.speed) / 6, 1);
 
     // Camera: aim a little ahead of the jeepney so you see where you're going. The easing
-    // uses 1 - exp(-rate·dt) so it feels the same at 30, 60 or 144 fps.
+    // uses 1 - exp(-rate·dt) so it feels the same at 30, 60 or 144 fps. It turns round the aim in quarter turns.
+    const goal = turns.current * (Math.PI / 2);
+    heading.current = calm.current ? goal : MathUtils.damp(heading.current, goal, tuning.cameraTurn, dt);
+    const sin = Math.sin(heading.current);
+    const cos = Math.cos(heading.current);
     const lookAhead = calm.current ? 0 : tuning.lookAhead;
-    target.set(c.x + Math.sin(c.yaw) * c.speed * lookAhead, 0, Math.min(c.z + Math.cos(c.yaw) * c.speed * lookAhead, FOCUS_SOUTH));
+    target.set(c.x + Math.sin(c.yaw) * c.speed * lookAhead, 0, c.z + Math.cos(c.yaw) * c.speed * lookAhead);
+    // (-sin, cos) points from the aim back towards the camera: pull the aim in if it's past FOCUS_EDGE that way.
+    const past = -target.x * sin + target.z * cos - FOCUS_EDGE;
+    if (past > 0) target.set(target.x + past * sin, 0, target.z - past * cos);
     focus.current.lerp(target, calm.current ? 1 : 1 - Math.exp(-tuning.cameraFollow * dt));
-    camera.position.copy(focus.current).add(offset.set(0, tuning.cameraHeight, tuning.cameraDistance).multiplyScalar(pullBack));
+    offset.set(-sin * tuning.cameraDistance, tuning.cameraHeight, cos * tuning.cameraDistance).multiplyScalar(pullBack);
+    camera.position.copy(focus.current).add(offset);
     camera.lookAt(focus.current);
 
     // Tell the buildings' shader where the jeepney is on screen, so whatever stands in front of it fades out.

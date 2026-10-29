@@ -17,9 +17,10 @@ export const tuning = {
   // camera
   cameraHeight: 22, // steeper than the island (12 / 20): the town has rooftops to see over
   cameraDistance: 25, // was 16 / 18: pulled back ~1.4x to show more of the bigger town
-  fadeRadius: 4, // metres round the jeepney where buildings in front of it dither away
+  fadeRadius: 5, // metres round the jeepney where buildings in front of it dither away (side-on it is ~7 m long)
   lookAhead: 0.3, // seconds of travel the camera looks ahead
   cameraFollow: 4, // higher = the camera catches up faster
+  cameraTurn: 6, // higher = a quarter turn of the view finishes sooner (6: ~0.5 s)
 };
 
 export type Tuning = typeof tuning;

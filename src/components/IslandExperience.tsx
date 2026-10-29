@@ -19,6 +19,8 @@ const World = dynamic(() => import("./world/World"), { ssr: false });
 // so the panel and the leva package are left out of the site entirely.
 const TuningPanel = process.env.NODE_ENV === "development" ? dynamic(() => import("./world/TuningPanel"), { ssr: false }) : () => null;
 
+const FACING = ["north", "east", "south", "west"];
+
 /** Where the autopilot is heading. `stopId` means "open that stop's card on arrival". */
 export type Destination = Point & { stopId?: string };
 
@@ -29,6 +31,8 @@ export type Destination = Point & { stopId?: string };
 export function IslandExperience() {
   const box = useRef<HTMLDivElement>(null);
   const destination = useRef<Destination | null>(null); // read by the frame loop every frame
+  const turns = useRef(0); // quarter turns of the view, clockwise from north; the frame loop eases the camera round
+  const [facing, setFacing] = useState(0); // the same, 0..3, for the compass
   const [onScreen, setOnScreen] = useState(true);
   const [nearId, setNearId] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -64,22 +68,29 @@ export function IslandExperience() {
     goTo({ ...parkingSpot(stop.id), stopId: id });
     setStatus(`Driving to ${stop.name}. Its card opens when you arrive.`);
   }, [goTo]);
+  const turn = useCallback((by: 1 | -1) => {
+    turns.current += by;
+    const f = ((turns.current % 4) + 4) % 4;
+    setFacing(f);
+    setStatus(`Facing ${FACING[f]}.`);
+  }, []);
   const openStop = useCallback((id: string | null) => {
     setStatus(""); // so the next drive is announced again, even to the same stop
     setOpenId(id);
   }, []);
 
-  // E opens the stop you're parked at (the same action as clicking the prompt).
+  // E opens the stop you're parked at (the same action as clicking the prompt); comma and full stop turn the view.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!isPlainKey(e) || !onScreen) return;
       if (e.code === "KeyE" && nearId && !openId) openStop(nearId);
       if (e.code === "KeyH" && !e.repeat) sound.horn();
+      if ((e.code === "Comma" || e.code === "Period") && !e.repeat && !openId) turn(e.code === "Comma" ? -1 : 1);
       if (/^(Key[WASD]|Arrow)/.test(e.code)) setMoved(true);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [nearId, openId, onScreen, openStop]);
+  }, [nearId, openId, onScreen, openStop, turn]);
 
   const near = stops.find((s) => s.id === nearId);
   const open = stops.find((s) => s.id === openId) ?? null;
@@ -92,6 +103,7 @@ export function IslandExperience() {
             active={onScreen}
             driving={onScreen && !openId}
             destination={destination}
+            turns={turns}
             onGoTo={goTo}
             onGoToStop={goToStop}
             onNear={setNearId}
@@ -120,14 +132,29 @@ export function IslandExperience() {
               Open {near.name}
             </button>
           )}
-          <p
-            className={`plate bg-paper px-3 py-1 text-sm font-medium transition-opacity duration-500 motion-reduce:transition-none ${moved ? "opacity-0" : ""}`}
-          >
-            <span className="hidden md:inline">
-              Drive with <Key>W</Key> <Key>A</Key> <Key>S</Key> <Key>D</Key> or the arrows, <Key>Space</Key> to brake, <Key>H</Key> to honk, or click the ground
-            </span>
-            <span className="md:hidden">Tap the ground to drive there</span>
-          </p>
+          {/* The driving hint on the left, the view's turn buttons on the right (they wrap under it below ~340 px). */}
+          <div className="flex w-full max-w-3xl flex-wrap items-center justify-between gap-2">
+            <p
+              className={`plate bg-paper px-3 py-1 text-sm font-medium transition-opacity duration-500 motion-reduce:transition-none ${moved ? "opacity-0" : ""}`}
+            >
+              <span className="hidden md:inline">
+                Drive with <Key>W</Key> <Key>A</Key> <Key>S</Key> <Key>D</Key> or the arrows, <Key>Space</Key> to brake, <Key>H</Key> to honk, or click the ground
+              </span>
+              <span className="md:hidden">Tap the ground to drive there</span>
+            </p>
+            <div role="group" aria-label="Turn the view" className="pointer-events-auto ml-auto flex items-center gap-1">
+              <button type="button" onClick={() => turn(-1)} aria-keyshortcuts="," aria-label="Turn left" className="sign grid size-11 place-items-center">
+                <TurnArrow />
+              </button>
+              {/* The compass: which way the camera looks. Screen readers hear it from the live region when it changes. */}
+              <span aria-hidden="true" className="plate grid size-9 place-items-center bg-paper font-display text-sm">
+                {FACING[facing][0].toUpperCase()}
+              </span>
+              <button type="button" onClick={() => turn(1)} aria-keyshortcuts="." aria-label="Turn right" className="sign grid size-11 place-items-center">
+                <TurnArrow right />
+              </button>
+            </div>
+          </div>
           <nav aria-label="Stops" className="pointer-events-auto relative w-full max-w-3xl">
             {/* The stops sit along a short stretch of road (between the two rows on a phone). */}
             <div aria-hidden="true" className="absolute inset-x-6 top-1/2 h-4 -translate-y-1/2 rounded-full bg-ink">
@@ -153,6 +180,16 @@ export function IslandExperience() {
       <StopCard stop={open} onClose={() => setOpenId(null)} />
       <TuningPanel />
     </>
+  );
+}
+
+/** A curved arrow for the turn buttons: anticlockwise, or clockwise when `right`. */
+function TurnArrow({ right = false }: { right?: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={`size-5 ${right ? "-scale-x-100" : ""}`} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
+    </svg>
   );
 }
 

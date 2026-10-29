@@ -39,7 +39,7 @@ function placer(box: RefObject<HTMLDivElement | null>, i: number) {
     const y = (1 - at.y) * (size.height / 2);
     const phone = size.width < 768;
     const top = headerBottom + 58; // below the header, plus the sign's own height (the sign hangs above this point)
-    const bottom = size.height - (phone ? 190 : 120); // the stop strip and the hint
+    const bottom = size.height - (phone ? 206 : 136); // the stop strip, and the hint and turn buttons above it
     const side = phone ? 64 : 90;
     let cx = Math.min(Math.max(x, side), size.width - side);
     let cy = Math.min(Math.max(y, top), bottom);

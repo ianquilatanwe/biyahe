@@ -50,15 +50,20 @@ function placer(box: RefObject<HTMLDivElement | null>, i: number) {
       const w = plate.offsetWidth + 8; // the plate, a little air round it, and its tail below
       const h = plate.offsetHeight + 16;
       if (edge) {
-        // Pinned to the left or right edge it steps down (or up, near the bottom); on the top or bottom edge, sideways.
+        // Pinned to the left or right edge it steps down, and once the stack reaches the bottom, up past the whole stack
+        // instead (one step up would land on the sign above); on the top or bottom edge, sideways.
         const upright = cx !== x;
-        for (let pass = 0; pass < 3; pass++) {
+        let down = true;
+        for (let pass = 0; pass < spots.length; pass++) {
           for (let j = 0; j < spots.length; j++) {
             const o = spots[j];
             if (j === i || (o.edge && j > i) || Math.abs(o.x - cx) >= (w + o.w) / 2 || Math.abs(o.y - cy) >= (h + o.h) / 2) continue;
             if (upright) {
-              cy = o.y + (h + o.h) / 2;
-              if (cy > bottom) cy = o.y - (h + o.h) / 2;
+              if (down) cy = o.y + (h + o.h) / 2;
+              if (!down || cy > bottom) {
+                down = false;
+                cy = o.y - (h + o.h) / 2;
+              }
             } else {
               cx = o.x + (cx >= o.x ? 1 : -1) * ((w + o.w) / 2);
               if (cx > size.width - side || cx < side) cx = o.x - (cx - o.x);

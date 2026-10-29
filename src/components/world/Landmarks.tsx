@@ -110,6 +110,25 @@ function tank(b: Batch, at: Vec) {
 }
 
 /**
+ * Windows round a two-storey landmark's upper floor, on the back and the sides: the view turns, so they're seen now.
+ * Panes in the colour of its front windows, white sills. `sides`: the side walls (-1 left, 1 right) not already dressed.
+ */
+function rearWindows(b: Batch, [W, D, cx]: Vec, y: number, pane: string, sides = [-1, 1]) {
+  const n = Math.max(1, Math.floor(W / 2.2));
+  for (let i = 0; i < n; i++) {
+    const x = cx - W / 2 + (W * (i + 0.5)) / n;
+    plain(b, pane, [1.1, 1.3, 0.05], [x, y, FRONT - D - 0.02]);
+    plain(b, WHITE, [1.25, 0.08, 0.14], [x, y - 0.7, FRONT - D - 0.06]);
+  }
+  for (const side of sides) {
+    for (const z of [FRONT - D / 3, FRONT - (2 * D) / 3]) {
+      plain(b, pane, [0.05, 1.3, 1.1], [cx + side * (W / 2 + 0.02), y, z]);
+      plain(b, WHITE, [0.14, 0.08, 1.25], [cx + side * (W / 2 + 0.06), y - 0.7, z]);
+    }
+  }
+}
+
+/**
  * Each landmark is drawn in its own frame (world.ts `site()`): the origin is just behind its kerb, +z faces its street,
  * -z runs into the block. Footprints and lots match FOOTPRINTS in world.ts. Signboards with words are separate meshes
  * (SIGNS below), and so are the moving parts (Lumenfold's lamp, Bagyo's cups and radar, the carinderia's steam).
@@ -150,6 +169,7 @@ const LANDMARK_MODELS: Record<string, (b: Batch) => void> = {
       b.box(WOOD, [1.6, 0.1, 0.16], [x, 4.32, FRONT + 0.08]);
     }
     tank(b, [2.3, H + 0.25, FRONT - 3.6]);
+    rearWindows(b, [W, D, 0], 5.0, CAPIZ);
     // The rack on the sidewalk: its clothes hang from the rail and swing (sway measured from the rail).
     const [rx, rz] = [3.0, -0.25];
     for (const x of [rx - 0.65, rx + 0.65]) plain(b, STEEL, [0.04, 1.5, 0.04], [x, 0.75, rz]);
@@ -207,6 +227,7 @@ const LANDMARK_MODELS: Record<string, (b: Batch) => void> = {
       b.cyl(TERRACOTTA, [0.3, 0.22, 0.45], [x, 0.23, -0.2]);
       b.cone(LEAF_DARK, 0.32, 1.2, [x, 1.0, -0.2]);
     }
+    rearWindows(b, [W, D, 0], floor + 1.0, GLASS, [1]); // the other side has the trellis
     b.box(GREEN, [0.08, 0.78, 4.2], [-W / 2 - 0.04, 5.15, FRONT - 2.5]); // the side sign's frame (SIGNS), above the trellis
     // The bamboo trellis on the side wall facing the camera (-x), vines climbing it.
     const sx = -W / 2 - 0.12;
@@ -249,6 +270,7 @@ const LANDMARK_MODELS: Record<string, (b: Batch) => void> = {
     b.box(DARK, [0.1, 2.5, 0.95], [W / 2 + 0.55, 4.1, FRONT - 0.1]); // the corner sign's back (its words: SIGNS)
     for (const y of [3.1, 5.1]) plain(b, STEEL, [0.6, 0.05, 0.05], [W / 2 + 0.25, y, FRONT - 0.1]);
     b.box(DARK, [1.4, 0.9, 1.0], [-1.2, H + 0.55, FRONT - 4.2]); // roof stair hut
+    rearWindows(b, [W, D, 0], 4.1, GLOW); // lit all round
   },
 
   // Bagyo: the PAGASA weather office. White, a blue band, a radar dome on the roof, the lattice mast beside it with its
@@ -268,6 +290,7 @@ const LANDMARK_MODELS: Record<string, (b: Batch) => void> = {
       plain(b, GLASS, [1.0, 1.1, 0.05], [cx + x, 4.75, FRONT + 0.02]);
       b.box(WHITE, [1.15, 0.08, 0.14], [cx + x, 4.15, FRONT + 0.08]);
     }
+    rearWindows(b, [W, D, cx], 4.75, GLASS);
     b.box(DARK, [2.75, 0.52, 0.06], [cx + 1.6, 1.75, FRONT + 0.03]); // the signal board's frame
     b.box(DARK, [2.5, 0.48, 0.06], [cx - 0.6, 2.72, FRONT + 0.03]); // the name board's frame
     // Notice board on legs on the sidewalk.

@@ -8,7 +8,7 @@ import { BLOCK_HALF, BLOCKS, EDGE, LOTS, OBSTACLES, SHORE_Z, site, STREET_HALF, 
 import { Batched, type Batch, type Vec } from "./Batched";
 import { banderitas, strut } from "./Landmarks";
 import { paint } from "./paint";
-import { shophouse } from "./shophouse";
+import { farHouse, shophouse } from "./shophouse";
 import { Water } from "./Water";
 
 const ASPHALT = "#5d626d";
@@ -45,9 +45,9 @@ const taken = (x0: number, z0: number, x1: number, z1: number) =>
 /**
  * A block: kerb, sidewalk, then shophouses filling its middle. The middle is split into a north and a south row,
  * each cut into two or three plots; a plot a landmark stands on is left empty for it. The middle block is the plaza.
- * Each row fronts its own street, so the north row's shops face away from the camera and only show their roofs and backs.
+ * Each row fronts its own street. `extra` draws what the north-looking camera never saw (shophouse.ts `Detail`).
  */
-function block(b: Batch, cx: number, cz: number, rnd: () => number) {
+function block(b: Batch, cx: number, cz: number, rnd: () => number, extra: () => number) {
   const h = BLOCK_HALF;
   b.flat(() => b.box(SIDEWALK, [2 * h, 0.02, 2 * h], [cx, 0.01, cz]));
   for (const [w, d, x, z] of [
@@ -77,7 +77,7 @@ function block(b: Batch, cx: number, cz: number, rnd: () => number) {
       const storeys = least + Math.floor(rnd() * (most - least + 1));
       // South row: front on the south edge facing +z. North row: front on the north edge, turned round.
       const at: Vec = [(x0 + x1) / 2, 0, row > 0 ? z1 : z0];
-      b.place(at, row > 0 ? 0 : Math.PI, () => shophouse(b, x1 - x0, inner, storeys, rnd, { front: row > 0 }));
+      b.place(at, row > 0 ? 0 : Math.PI, () => shophouse(b, x1 - x0, inner, storeys, rnd, { front: row > 0, extra }));
     }
   }
 }
@@ -235,48 +235,53 @@ function promenade(b: Batch) {
 }
 
 /**
- * The rest of town, beyond the outer streets: rows of shophouses along the west, south and east edges, three deep with
- * an alley between, so the town carries on past where you can drive instead of stopping at a cliff (the camera sees
- * ~25 m past the south street and further at the top corners). Lower detail; not in the colliders: the square's edge
- * stops the jeepney first. Only the first row's fronts face town; the rows behind and the south rows (which face
- * away from the camera) show only roofs and backs. The south rows run on past the corners, the side rows stop short.
+ * The rest of town, beyond the outer streets: a row of shophouses along the west, south and east edges, then rows of
+ * plain far houses with alleys between, out to where the fog is full (~130 m), so the town carries on whichever way
+ * the view turns. Lower detail; not in the colliders: the square's edge stops the jeepney first. The first row faces
+ * town, so its shopfronts are seen from across the outer street. The south rows run on past the corners, the side
+ * rows stop short of them and of the promenade.
  */
-function edgeRow(b: Batch, rnd: () => number) {
+function edgeRow(b: Batch, rnd: () => number, extra: () => number) {
   const from = EDGE + SIDEWALK_WIDTH;
   const depth = 7;
   const alley = 2;
+  const rings = 10;
+  const far = from + rings * (depth + alley); // the south rows run this far east and west, past the corners
   const lay = (place: (out: number, along: number) => Vec, yaw: number, side: boolean, start: number, end: number) => {
-    for (let ring = 0; ring < 3; ring++) {
+    for (let ring = 0; ring < rings; ring++) {
       const out = from + ring * (depth + alley);
       for (let along = start; along < end; ) {
-        const len = 4 + rnd() * 3.5;
-        const storeys = 1 + Math.floor(rnd() * (side ? 2 : 1));
-        const front = side && ring === 0;
-        b.place(place(out, along + len / 2), yaw, () => shophouse(b, len, depth, storeys, rnd, { front, low: true }));
+        const near = ring === 0 && Math.abs(along) < from + depth; // the row facing the outer street
+        const len = near ? 4 + rnd() * 3.5 : 5 + rnd() * 5;
+        const storeys = 1 + Math.floor(rnd() * (side || !near ? 2 : 1)); // the south street's own row stays low
+        b.place(place(out, along + len / 2), yaw, () =>
+          near ? shophouse(b, len, depth, storeys, rnd, { front: side, low: true, extra }) : farHouse(b, len, depth, storeys, rnd, ring < 4),
+        );
         along += len;
       }
     }
   };
   b.flat(() => {
     for (const [w, d, x, z] of [
-      [SIDEWALK_WIDTH, 100, -EDGE - 1, -12],
-      [SIDEWALK_WIDTH, 100, EDGE + 1, -12],
-      [150, SIDEWALK_WIDTH, 0, EDGE + 1],
+      [SIDEWALK_WIDTH, 2 * EDGE, -EDGE - 1, 0],
+      [SIDEWALK_WIDTH, 2 * EDGE, EDGE + 1, 0],
+      [2 * (EDGE + SIDEWALK_WIDTH), SIDEWALK_WIDTH, 0, EDGE + 1],
     ]) b.box(SIDEWALK, [w, 0.02, d], [x, 0.01, z]);
   });
-  lay((out, a) => [-out, 0, a], Math.PI / 2, true, -60, EDGE); // west, facing east into town
-  lay((out, a) => [out, 0, a], -Math.PI / 2, true, -60, EDGE); // east, facing west
-  lay((out, a) => [a, 0, out], Math.PI, false, -75, 75); // south, facing north (away from the camera), kept low
+  lay((out, a) => [-out, 0, a], Math.PI / 2, true, -EDGE, EDGE); // west, facing east into town (the promenade runs on north of it)
+  lay((out, a) => [out, 0, a], -Math.PI / 2, true, -EDGE, EDGE); // east, facing west
+  lay((out, a) => [a, 0, out], Math.PI, false, -far, far); // south, facing north into town, kept low
 }
 
 function buildTown(b: Batch) {
   const rnd = seeded(23);
-  for (const z of BLOCKS) for (const x of BLOCKS) block(b, x, z, rnd);
+  const extra = seeded(57); // see shophouse.ts `Detail.extra`
+  for (const z of BLOCKS) for (const x of BLOCKS) block(b, x, z, rnd, extra);
   roadPaint(b);
   poles(b);
   fiesta(b);
   promenade(b);
-  edgeRow(b, rnd);
+  edgeRow(b, rnd, extra);
 }
 
 /** The ground (streets), the sea, and every building that isn't a stop. A click or tap on the ground drives there. */

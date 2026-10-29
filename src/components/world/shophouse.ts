@@ -1,4 +1,4 @@
-import { BoxGeometry, ConeGeometry } from "three";
+import { BoxGeometry, ConeGeometry, CylinderGeometry } from "three";
 import type { Batch, Vec } from "./Batched";
 
 /**
@@ -29,10 +29,16 @@ const GROUND = 3.2; // the shop floor, taller than the floors above
 const STOREY = 2.8;
 
 export type Detail = {
-  /** The front faces the camera's side (south, east or west), so the shop and sign are worth drawing. */
+  /** The front faced the camera's side when it only looked north (south, east or west): shop and sign drawn from `rnd`. */
   front: boolean;
   /** The rest of town past the edge: windows, roof and sign only, no aircons, balconies or pots. */
   low?: boolean;
+  /**
+   * Since the view turns, every side gets seen: given this, the parts the north-looking camera never saw are added too
+   * (the shopfront of a building facing away, windows on the back and on the sides). They draw from this second random
+   * stream, so adding them left every building that was already there exactly as it was.
+   */
+  extra?: () => number;
 };
 
 /** Height of a shophouse with this many storeys, roof parapet not included. */
@@ -69,7 +75,56 @@ export function shophouse(b: Batch, width: number, depth: number, storeys: numbe
       for (let k = 1; k < storeys; k++) windows(plain, w, GROUND + (k - 1) * STOREY, 0, rnd);
     });
   }
+  const more = detail.extra;
+  if (more) {
+    if (!detail.front) {
+      shopfront(b, plain, w, more, detail, jut);
+      for (let k = 1; k < storeys; k++) upperFloor(b, plain, w, GROUND + (k - 1) * STOREY, jut, more, detail, k === storeys - 1);
+    } else if (storeys > 1) {
+      b.place([0, 0, -depth], Math.PI, () => {
+        for (let k = 1; k < storeys; k++) windows(plain, w, GROUND + (k - 1) * STOREY, 0, more);
+      });
+    }
+    // Windows down both sides of the upper floors: a side shows wherever its neighbour is lower or missing (and is
+    // hidden behind a taller one, which costs a few triangles but keeps the plots independent of each other).
+    if (!detail.low) {
+      for (const side of [-1, 1]) {
+        b.place([(side * w) / 2, 0, (jut - depth) / 2], (side * Math.PI) / 2, () => {
+          for (let k = 1; k < storeys; k++) windows(plain, depth + jut - 1, GROUND + (k - 1) * STOREY, 0, more);
+        });
+      }
+    }
+  }
   roof(b, plain, w, depth, height, rnd, detail, jut);
+}
+
+/**
+ * The town past the edge rows, out to where the fog is full: a plain block with a hipped roof or a flat one with a
+ * water tank, no shop (at that distance, and that hazy, they're colour and shape). About 30 triangles; the nearer rows
+ * add dark windows on their two long sides (`windows`), ~12 triangles each.
+ * In the current frame like `shophouse`: front middle at the origin, running back to -depth.
+ */
+export function farHouse(b: Batch, width: number, depth: number, storeys: number, rnd: () => number, windows = false) {
+  const pick = <T,>(list: T[]) => list[Math.floor(rnd() * list.length)];
+  const w = width - 0.15;
+  const height = heightOf(storeys);
+  b.add(pick(WALLS), new BoxGeometry(w, height, depth), [0, height / 2, -depth / 2]);
+  if (windows) {
+    const n = Math.max(1, Math.floor(w / 2));
+    for (let k = 0; k < storeys; k++) {
+      for (let i = 0; i < n; i++) {
+        const x = -w / 2 + (w * (i + 0.5)) / n;
+        for (const z of [0.01, -depth - 0.01]) b.add(GLASS, new BoxGeometry(0.9, 1.1, 0.04), [x, (k ? GROUND + (k - 1) * STOREY : 0) + 1.5, z]);
+      }
+    }
+  }
+  if (rnd() < 0.5) {
+    const rise = 1 + rnd() * 0.4;
+    const g = new ConeGeometry(Math.SQRT1_2, rise, 4).rotateY(Math.PI / 4).scale(w + 0.4, 1, depth + 0.4);
+    b.add(pick(ROOFS), g, [0, height + rise / 2, -depth / 2]);
+  } else {
+    b.add(pick(TANKS), new CylinderGeometry(0.48, 0.5, 1.1, 6), [(rnd() - 0.5) * (w - 1.4), height + 1.15, -depth / 2]);
+  }
 }
 
 type Plain = (color: string, size: Vec, at: Vec, rot?: Vec) => void;

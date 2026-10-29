@@ -7,7 +7,7 @@
  * carries its own 2D coordinates in metres (see Batch.add), with u along the part's longest side: grain runs along
  * a plank, ridges run down a roof sheet, whichever way the part is turned. The ground uses world x/z instead.
  */
-export const SURFACE = { paint: 0, wood: 1, zinc: 2, steel: 3, plaster: 4, rock: 5, leaf: 6, cloth: 7, sand: 8, grass: 9, dirt: 10 } as const;
+export const SURFACE = { paint: 0, wood: 1, zinc: 2, steel: 3, plaster: 4, rock: 5, leaf: 6, cloth: 7, sand: 8, grass: 9, dirt: 10, asphalt: 11 } as const;
 
 /** Paint colour (lower-case hex) → surface. Anything not listed is plain paint (a faint grain). */
 export const SURFACE_OF: Record<string, number> = {
@@ -32,11 +32,18 @@ export const SURFACE_OF: Record<string, number> = {
   "#8cc56b": SURFACE.grass, // the plaza lawn
   "#b9b2a4": SURFACE.plaster, // kerbs
   "#a39d90": SURFACE.plaster, // seawall, fountain
-  "#c9c2b4": SURFACE.plaster, // blockout greys
-  "#bdb6a8": SURFACE.plaster,
-  "#d4cdbf": SURFACE.plaster,
-  "#b3ad9f": SURFACE.plaster,
-  "#c4bfb6": SURFACE.plaster,
+  "#b8b4ab": SURFACE.plaster, // electric poles
+  // shophouse.ts: walls (cream and white are above), roofs, shutters
+  "#f2c4a8": SURFACE.plaster,
+  "#bfe0d0": SURFACE.plaster,
+  "#a9cfe0": SURFACE.plaster,
+  "#f6dc8c": SURFACE.plaster,
+  "#e9b7c2": SURFACE.plaster,
+  "#d9d2c3": SURFACE.plaster,
+  "#b0623f": SURFACE.zinc, // rusted
+  "#c4473a": SURFACE.zinc, // painted red
+  "#4f8a6e": SURFACE.zinc, // painted green
+  "#98a2a8": SURFACE.steel, // roll-up shutters
   // Jeepney.tsx
   "#c3cbd3": SURFACE.steel, // stainless body
   "#9da7b1": SURFACE.steel, // STEEL_DARK
@@ -49,7 +56,7 @@ export const SURFACE_OF: Record<string, number> = {
 export const GROUND_OF: Record<string, number> = {
   "#f1d9a7": SURFACE.sand,
   "#8cc56b": SURFACE.grass,
-  "#5d626d": SURFACE.dirt, // asphalt: worn patches and grit
+  "#5d626d": SURFACE.asphalt,
 };
 
 export const SURFACE_GLSL = /* glsl */ `
@@ -105,9 +112,13 @@ export const SURFACE_GLSL = /* glsl */ `
       f *= (0.93 + 0.12 * surfNoise(uv * 6.0)) * (1.0 - 0.08 * ripple * surfFine(uv, 0.4));
     } else if (kind < 9.5) { // grass: lighter and darker patches, and a fine blade texture
       f *= 0.86 + 0.2 * surfNoise(uv * 0.5) + 0.14 * (surfNoise(vec2(uv.x * 12.0, uv.y * 3.0)) - 0.5) * surfFine(uv, 12.0);
-    } else { // dirt: worn patches and pebbles
+    } else if (kind < 10.5) { // dirt: worn patches and pebbles
       float pebble = surfSpeck(uv, 8.0, 0.82);
       f *= (0.86 + 0.2 * surfNoise(uv * 1.5)) * (1.0 - 0.14 * pebble * surfFine(uv, 8.0));
+    } else { // asphalt: fine grit, and square patches where it was dug up and resurfaced
+      float grit = surfNoise(uv * 10.0) - 0.5;
+      float redone = step(0.8, surfHash(floor(uv * 0.3) + 0.5));
+      f *= (0.92 + 0.1 * surfNoise(uv * 0.6)) * (1.0 - 0.09 * redone) * (1.0 + 0.16 * grit * surfFine(uv, 10.0));
     }
     return f;
   }

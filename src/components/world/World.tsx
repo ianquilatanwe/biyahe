@@ -170,8 +170,9 @@ export default function World({ active, onGoTo, onGoToStop, nearId, onOpen, onRe
       <color attach="background" args={[SKY]} />
       <fog attach="fog" args={[SKY, 70, 160]} />
       {/* Late afternoon: a lower, warmer sun from the west for longer light-and-shade, and a cooler sky fill.
-          Kept near-white: strongly tinted light multiplies into every colour and turned the sand orange. */}
-      <hemisphereLight args={["#f3f6ff", "#6f9a62", 1.25]} />
+          Kept near-white: strongly tinted light multiplies into every colour and turned the sand orange.
+          The ground bounce is warm pavement grey (the town has little grass; green tinted every wall). */}
+      <hemisphereLight args={["#f3f6ff", "#a39a8a", 1.25]} />
       <directionalLight position={[-26, 22, 14]} intensity={2.25} color="#ffe9cc" />
       <Town onGround={onGoTo} />
       <Landmarks onStop={onGoToStop} />

@@ -47,7 +47,10 @@ everything is built from code primitives (Ian chose code over Blender for the je
 - **Static parts go through `Batched`** (`components/world/Batched.tsx`): a build function adds boxes, cylinders,
   rocks and extruded side-view outlines (`sideways()` in `Jeepney.tsx`: curved fenders, wheel arches), and they're
   merged into ONE mesh with the colour in each vertex. The town's buildings (`Town.tsx`), the stops and their props
-  (`Landmarks.tsx`) and the jeepney body cost 2 draw calls each this way (parts + shadows); the whole frame is ~27. Only animated, unlit,
+  (`Landmarks.tsx`) and the jeepney body cost 2 draw calls each this way (parts + shadows); the whole frame is ~27.
+  Ordinary buildings come from one seeded generator, `shophouse.ts` (`Town.tsx` lays out the plots). A north-row shop
+  faces away from the camera, so it's built with `front: false` (roof and back windows only); the edge row uses `low`.
+  Small details there use plain `BoxGeometry` (12 triangles, not a bevelled box's 108). Only animated, unlit,
   textured (the jeepney's side art) or clickable ground parts (the road ring) are separate meshes.
 - **Detail lives in Batch's helpers**, so every model gets it: `box` bevels its edges (RoundedBoxGeometry, 1 segment;
   bars under 3 cm stay plain), `cyl`/`cone` double the sides they're given (3–4-sided shapes like flags stay), balls are
@@ -80,7 +83,7 @@ everything is built from code primitives (Ian chose code over Blender for the je
   after the sRGB step. The sea's foam breaks along the seawall at `SHORE_Z`.
 - No real-time shadows: fake soft shadows with a dark transparent disc.
 - Measure with `renderer.info.render.calls` before optimising; merge or instance static props when
-  the count climbs (town budget: ≤ 60 draw calls, ≤ 400k triangles; phase 1 is 27 and ~177k).
+  the count climbs (town budget: ≤ 60 draw calls, ≤ 400k triangles; phase 2 is 27 and ~225k).
 - No new texture or model files unless they're small (whole scene under 1 MB of assets).
 
 ## The HTML layer (signboard style)
@@ -102,6 +105,10 @@ everything is built from code primitives (Ian chose code over Blender for the je
   its focus ring is drawn inside the button (yellow, inset), not the page's outer ring plus halo.
 - In-world sign tails keep their base flat on the plate edge and lean only the tip (CSS skew); rotating the whole
   tail lifts one end of the base off the plate.
+- Signs stay below the header by measuring it (`data-hud-header`, a ResizeObserver): it wraps to two rows on phones
+  and at 768. Off-screen signs that would land on each other step along their edge (`spots` in `StopSigns.tsx`).
+- Electric poles and wires run only along north–south streets: east–west wires cut across the screen in front of the
+  jeepney. Poles keep 6 m clear of every stop's front.
 
 ## Sound
 - `src/lib/sound.ts` is one module-level engine (Web Audio, no files): engine, sea, horn. Ian liked the idle as it is:

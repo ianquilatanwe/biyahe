@@ -18,8 +18,9 @@ export default function Home() {
       <main>
         {/* The island fills the first screen. Everything on it is also on the route board below. */}
         <section aria-labelledby="title" className="relative h-svh overflow-hidden bg-sky">
-          {/* The header comes first in the source so "List" is the first Tab stop; z-20 keeps it above the island's signs. */}
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex flex-wrap items-start justify-between gap-1.5 p-2.5 sm:gap-2 sm:p-5">
+          {/* The header comes first in the source so "List" is the first Tab stop; z-20 keeps it above the island's signs,
+              which measure it (data-hud-header) to stay below it. */}
+          <div data-hud-header className="pointer-events-none absolute inset-x-0 top-0 z-20 flex flex-wrap items-start justify-between gap-1.5 p-2.5 sm:gap-2 sm:p-5">
             {/* The route plate on a jeepney's windscreen: where it's going, then who's driving. */}
             <div className="plate pointer-events-auto min-h-10 gap-2 py-1 pr-2.5 pl-2 shadow-[0_3px_0_var(--color-ink)] sm:gap-2.5 sm:pr-3 sm:pl-2.5">
               <h1 id="title" className="text-xl leading-none text-red-deep">

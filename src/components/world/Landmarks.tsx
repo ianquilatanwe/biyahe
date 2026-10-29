@@ -192,7 +192,7 @@ const LANDMARK_MODELS: Record<string, (b: Batch) => void> = {
 };
 
 /** A thin bar from `p` to `q` (in the current frame): mast legs, braces, strings, frond spines. Square unless `width` is given (leaflets). */
-function strut(b: Batch, color: string, p: Vec, q: Vec, thickness: number, width = thickness) {
+export function strut(b: Batch, color: string, p: Vec, q: Vec, thickness: number, width = thickness) {
   const run = Math.hypot(q[0] - p[0], q[2] - p[2]);
   const mid: Vec = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2, (p[2] + q[2]) / 2];
   b.place(mid, Math.atan2(q[0] - p[0], q[2] - p[2]), () =>
@@ -204,7 +204,7 @@ function strut(b: Batch, color: string, p: Vec, q: Vec, thickness: number, width
  * Banderitas: a string of little triangle flags in fiesta colours, sagging between two points (in the
  * current frame). The string is short boxes along the curve; each flag hangs point-down below it.
  */
-function banderitas(b: Batch, from: Vec, to: Vec, sag: number, flags = 10) {
+export function banderitas(b: Batch, from: Vec, to: Vec, sag: number, flags = 10) {
   const at = (t: number): Vec => [from[0] + (to[0] - from[0]) * t, from[1] + (to[1] - from[1]) * t - sag * 4 * t * (1 - t), from[2] + (to[2] - from[2]) * t];
   const yaw = Math.atan2(to[0] - from[0], to[2] - from[2]);
   const n = flags * 2;
@@ -362,9 +362,7 @@ function buildScenery(b: Batch) {
   for (const [x, size] of [[-31, 0.8], [-12, 0.6], [9, 0.9], [27, 0.6], [44, 0.8], [-50, 0.7]]) {
     b.rock(x % 2 ? ROCK : ROCK_DARK, size, [x, -0.5, SHORE_Z - 1.6], [x, x * 2, 0], [1.2, 0.7, 1]);
   }
-  // Four shade trees at the plaza's corners (palms until phase 2).
-  for (const [x, z] of [[-4.5, -4.5], [4.5, -4.5], [-4.5, 4.5], [4.5, 4.5]]) palm(b, [x, 0.03, z], 3.8, Math.atan2(x, z));
-  tufts(b);
+  tufts(b); // the plaza's trees, benches and fountain are town fabric (Town.tsx)
   // The basketball court in the south-east block, its hoop at the north end.
   b.place([22, 0, 19.5], 0, () => {
     court(b);

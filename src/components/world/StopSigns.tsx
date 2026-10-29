@@ -1,6 +1,6 @@
 "use client";
 
-import { createRef, useMemo, type RefObject } from "react";
+import { createRef, useEffect, useMemo, type RefObject } from "react";
 import { useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import { Vector3, type Camera, type Object3D } from "three";
@@ -12,16 +12,22 @@ const HEIGHT: Record<string, number> = { fashionhub: 3.6, sprig: 3.3, lumenfold:
 
 const at = new Vector3();
 const base = new Vector3();
+/** Where each sign was put on screen (its tail tip) and how much room it takes, this frame or the last. */
+const spots = stops.map(() => ({ x: -1e4, y: -1e4, w: 0, h: 0, edge: false }));
+/** The header's bottom edge over the canvas (it sits at the top and wraps to two rows on phones and tablets), kept by a ResizeObserver. */
+let headerBottom = 60;
 /**
  * Where on screen a sign goes: over its landmark, but kept inside the part of the screen nobody covers
  * (below the header, above the stop buttons, off the edges). A landmark out of frame keeps its sign at the
  * nearest edge, like a game's off-screen marker: the sign turns paper-white and its tail moves round the
  * sign's border to the side facing the landmark, pointing at it, so it never reads as "the landmark is here".
  * A landmark that is in frame but whose sign had to move (below the header, say) keeps a yellow sign, its
- * tail turned to the building. Signs also shrink with distance from the camera, to 85% on the far side.
+ * tail turned to the building. Off-screen signs that land on each other step aside along their edge (the signs in
+ * frame never move for them, and between two off-screen ones the earlier stop keeps its place).
+ * Signs also shrink with distance from the camera, to 85% on the far side.
  * This runs every frame, so it writes CSS variables straight onto the sign's element instead of re-rendering.
  */
-function placer(box: RefObject<HTMLDivElement | null>) {
+function placer(box: RefObject<HTMLDivElement | null>, i: number) {
   return (el: Object3D, camera: Camera, size: { width: number; height: number }) => {
     at.setFromMatrixPosition(el.matrixWorld);
     const scale = Math.min(1, Math.max(0.85, 1 - ((at.distanceTo(camera.position) - 20) / 35) * 0.15));
@@ -32,16 +38,36 @@ function placer(box: RefObject<HTMLDivElement | null>) {
     const x = (at.x + 1) * (size.width / 2);
     const y = (1 - at.y) * (size.height / 2);
     const phone = size.width < 768;
-    const top = phone ? 124 : 130; // header row plus the sign's own height (the sign hangs above this point)
+    const top = headerBottom + 58; // below the header, plus the sign's own height (the sign hangs above this point)
     const bottom = size.height - (phone ? 190 : 120); // the stop strip and the hint
     const side = phone ? 64 : 90;
-    const cx = Math.min(Math.max(x, side), size.width - side);
-    const cy = Math.min(Math.max(y, top), bottom);
+    let cx = Math.min(Math.max(x, side), size.width - side);
+    let cy = Math.min(Math.max(y, top), bottom);
     const b = box.current;
     const plate = b?.querySelector<HTMLElement>("[data-go]");
     if (b && plate) {
-      const moved = Math.hypot(x - cx, y - cy) > 4;
       const edge = base.z > 1 || bx < 0 || bx > size.width || by < 0 || by > size.height; // the landmark itself is out of frame
+      const w = plate.offsetWidth + 8; // the plate, a little air round it, and its tail below
+      const h = plate.offsetHeight + 16;
+      if (edge) {
+        // Pinned to the left or right edge it steps down (or up, near the bottom); on the top or bottom edge, sideways.
+        const upright = cx !== x;
+        for (let pass = 0; pass < 3; pass++) {
+          for (let j = 0; j < spots.length; j++) {
+            const o = spots[j];
+            if (j === i || (o.edge && j > i) || Math.abs(o.x - cx) >= (w + o.w) / 2 || Math.abs(o.y - cy) >= (h + o.h) / 2) continue;
+            if (upright) {
+              cy = o.y + (h + o.h) / 2;
+              if (cy > bottom) cy = o.y - (h + o.h) / 2;
+            } else {
+              cx = o.x + (cx >= o.x ? 1 : -1) * ((w + o.w) / 2);
+              if (cx > size.width - side || cx < side) cx = o.x - (cx - o.x);
+            }
+          }
+        }
+      }
+      Object.assign(spots[i], { x: cx, y: cy, w, h, edge });
+      const moved = Math.hypot(x - cx, y - cy) > 4;
       // The tail points down at the landmark; once the sign has moved, towards the landmark's foot (or, out of
       // frame, towards where it is). It leaves the plate's rectangle on that side, on the straight part of
       // the edge (clear of the rounded corners). Its base stays flat on that edge and only its tip leans,
@@ -88,7 +114,14 @@ export function StopSigns({ nearId, onStop, onOpen }: { nearId: string | null; o
   const parent = useThree((s) => s.gl.domElement.parentElement);
   const portal = useMemo(() => ({ current: parent! }), [parent]);
   const boxes = useMemo(() => stops.map(() => createRef<HTMLDivElement>()), []);
-  const placers = useMemo(() => boxes.map(placer), [boxes]);
+  const placers = useMemo(() => boxes.map((box, i) => placer(box, i)), [boxes]);
+  useEffect(() => {
+    const header = document.querySelector<HTMLElement>("[data-hud-header]");
+    if (!header) return;
+    const measure = new ResizeObserver(() => (headerBottom = header.offsetHeight));
+    measure.observe(header);
+    return () => measure.disconnect();
+  }, []);
   return stops.map((s, i) => {
     const near = s.id === nearId;
     return (

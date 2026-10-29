@@ -2,10 +2,25 @@
 
 import { useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { AdditiveBlending, CanvasTexture, ConeGeometry, DoubleSide, ShaderMaterial, Vector3, type Group, type SpriteMaterial } from "three";
+import {
+  AdditiveBlending,
+  BoxGeometry,
+  BufferAttribute,
+  BufferGeometry,
+  CanvasTexture,
+  ConeGeometry,
+  DoubleSide,
+  ShaderMaterial,
+  Vector3,
+  type Group,
+  type Mesh,
+  type SpriteMaterial,
+} from "three";
 import { stops } from "@/lib/stops";
 import { LANDMARKS, SHORE_Z, site } from "@/lib/world";
 import { Batched, type Batch, type Vec } from "./Batched";
+import { parkedJeepney } from "./Jeepney";
+import { makeRouteSign } from "./routeSign";
 import { useCalm } from "./useCalm";
 import { WIND } from "./weather";
 
@@ -40,154 +55,328 @@ const LINE = "#fbf6ea";
 const FLAGS = [RED, YELLOW, BLUE, WHITE, TEAL, ORANGE];
 
 
-/** Where the weather station's mast stands in its landmark frame, and how tall it is (the cups spin on top). */
-const MAST: Vec = [0.5, 0, -1.9];
-const MAST_HEIGHT = 7;
+const GLOW = "#ffd76a"; // lit windows full of lamps
+const CAPIZ = "#efe6cf"; // shell-paned windows
+const GREEN = "#3f7d4a";
+const GLASS = "#3d4a5c";
+const SHUTTER = "#98a2a8";
+const SHUTTER_LINE = "#7d868c";
+const TANK = "#2f6db5";
+const TARP = "#e98a3a";
 
 /**
- * Each landmark is drawn in its own little frame: the origin is its spot on the stop ring, +z faces
- * the island's middle (where the jeepney parks), -z faces the sea. Footprints match FOOTPRINTS in world.ts.
+ * A landmark's shopfront line in its frame: level with the town's shophouses, 2 m back from the kerb, so the sidewalk
+ * (where racks, pots and tables stand) runs in front of it.
+ */
+const FRONT = -1.4;
+
+/** Where the weather station's mast stands in its landmark frame, and how tall it is (the cups spin on top). */
+const MAST: Vec = [3.6, 0, FRONT - 3.2];
+const MAST_HEIGHT = 12;
+
+/**
+ * Lumenfold's roof lamp: its turntable at the front of the roof, the elbow it nods from, and its shade, tilted below
+ * level and reaching out over the sidewalk. Kept low (~8 m) and forward, so it's in frame when you park in front.
+ */
+const LUMEN_ROOF = 5.6;
+const LAMP_BASE: Vec = [0, LUMEN_ROOF + 0.25, FRONT - 1.3];
+const LAMP_ELBOW: Vec = [0, 1.6, 0.9]; // in the turntable's frame
+const LAMP_SHADE: Vec = [0, 0.35, 1.6]; // in the elbow's frame
+const SHADE_TILT = 0.9; // radians below level
+const SHADE_DIR = new Vector3(0, -Math.sin(SHADE_TILT), Math.cos(SHADE_TILT));
+
+/** The carinderia's pots, in its frame: steam rises from them. */
+const POTS: Vec[] = [-1.6, -0.55, 0.55, 1.6].map((x) => [x, 1.42, FRONT - 0.45]);
+
+/** Small parts with no bevel (a bevel is invisible on them and costs 108 triangles instead of 12). */
+function plain(b: Batch, color: string, size: Vec, at: Vec, rot?: Vec) {
+  b.add(color, new BoxGeometry(...size), at, rot);
+}
+
+/** A roll-up shutter `w` wide from the ground to `top`, raised to `open` (the dark shop shows below it). */
+function shutter(b: Batch, w: number, top: number, open: number, at: Vec) {
+  const [x, , z] = at;
+  if (open) plain(b, DARK, [w, open, 0.04], [x, open / 2, z]);
+  plain(b, SHUTTER, [w, top - open, 0.05], [x, (top + open) / 2, z + 0.01]);
+  for (let y = open + 0.25; y < top; y += 0.25) plain(b, SHUTTER_LINE, [w, 0.025, 0.06], [x, y, z + 0.01]);
+}
+
+/** A plastic water tank on a steel stand, on a roof (`at` is its foot). */
+function tank(b: Batch, at: Vec) {
+  const [x, y, z] = at;
+  for (const [dx, dz] of [[-0.35, -0.35], [0.35, -0.35], [-0.35, 0.35], [0.35, 0.35]]) plain(b, STEEL, [0.04, 0.6, 0.04], [x + dx, y + 0.3, z + dz]);
+  b.cyl(TANK, [0.5, 0.52, 1.1], [x, y + 1.15, z], undefined, 8);
+}
+
+/**
+ * Each landmark is drawn in its own frame (world.ts `site()`): the origin is just behind its kerb, +z faces its street,
+ * -z runs into the block. Footprints and lots match FOOTPRINTS in world.ts. Signboards with words are separate meshes
+ * (SIGNS below), and so are the moving parts (Lumenfold's lamp, Bagyo's cups and radar, the carinderia's steam).
  */
 const LANDMARK_MODELS: Record<string, (b: Batch) => void> = {
-  // FashionHub: a sari-sari store with a barred window, a striped awning and a rack of clothes.
+  // FashionHub: an ukay-ukay boutique in a two-storey shophouse. Capiz windows upstairs, mannequins and a striped
+  // awning below, the shutter half up, and a rack of clothes on the sidewalk swinging in the wind.
   fashionhub(b) {
-    b.shadow([0, -1.7], [2.3, 1.8], 2.3);
-    b.box(CONCRETE, [3.4, 0.2, 2.6], [0, 0.1, -1.7]);
-    b.box(TEAL, [3.0, 2.0, 2.2], [0, 1.2, -1.8]);
-    b.box(DARK, [1.6, 0.9, 0.05], [-0.3, 1.35, -0.68]); // the window, dark inside
-    for (let x = -1.0; x <= 0.45; x += 0.29) b.box(STEEL, [0.04, 0.9, 0.04], [x, 1.35, -0.63]);
-    b.box(WOOD, [1.8, 0.08, 0.35], [-0.3, 0.88, -0.5]); // counter ledge
-    [RED, YELLOW, BLUE, ORANGE].forEach((c, i) => b.box(c, [0.16, 0.2, 0.16], [-0.9 + i * 0.4, 1.02, -0.5]));
-    b.box(WOOD_DARK, [0.6, 1.5, 0.05], [1.0, 0.95, -0.68]); // door
-    b.box(ZINC, [3.5, 0.08, 2.9], [0, 2.35, -1.7], [0.18, 0, 0]); // zinc roof, sloping to the front
-    for (let i = 0; i < 6; i++) b.box(i % 2 ? WHITE : RED, [0.55, 0.05, 0.9], [-1.37 + i * 0.55, 1.95, -0.25], [0.38, 0, 0]);
-    // clothes rack in front, for FashionHub
-    for (const x of [-1.9, -0.9]) b.box(STEEL, [0.05, 1.5, 0.05], [x, 0.75, -0.15]);
-    b.box(STEEL, [1.1, 0.04, 0.04], [-1.4, 1.5, -0.15]);
-    [RED, YELLOW, BLUE].forEach((c, i) => b.box(c, [0.26, 0.5, 0.06], [-1.75 + i * 0.33, 1.18, -0.15]));
+    const [W, D, H] = [7.6, 5, 6.2];
+    const mid = FRONT - D / 2;
+    b.shadow([0, mid], [W / 2 + 0.6, D / 2 + 0.6], H * 0.4);
+    b.box(TEAL, [W, H, D], [0, H / 2, mid]);
+    b.box(WHITE, [W + 0.3, 0.3, D + 0.3], [0, H + 0.1, mid]); // cornice
+    b.box(WHITE, [W + 0.1, 0.16, 0.14], [0, 4.1, FRONT + 0.07]); // ledge between the floors
+    // The display: a dark recess in a white frame, three mannequins in front of it.
+    plain(b, DARK, [4.0, 2.4, 0.05], [-1.5, 1.4, FRONT + 0.01]);
+    b.box(WHITE, [4.3, 0.12, 0.14], [-1.5, 2.66, FRONT + 0.07]);
+    b.box(WHITE, [4.3, 0.24, 0.14], [-1.5, 0.12, FRONT + 0.07]);
+    for (const x of [-3.6, 0.6]) b.box(WHITE, [0.12, 2.6, 0.14], [x, 1.35, FRONT + 0.07]);
+    [RED, YELLOW, BLUE].forEach((c, i) => {
+      const [x, z] = [-2.7 + i * 1.2, FRONT + 0.4];
+      b.shadow([x, z], [0.35, 0.35], 1.5);
+      plain(b, STEEL, [0.04, 0.6, 0.04], [x, 0.3, z]);
+      b.cyl(c, [0.12, 0.36, 0.9], [x, 1.05, z], undefined, 8); // the dress
+      b.cyl(CREAM, [0.1, 0.13, 0.24], [x, 1.62, z], undefined, 6);
+      b.ball(CREAM, 0.12, [x, 1.87, z]);
+    });
+    shutter(b, 2.4, 2.6, 1.2, [2.3, 0, FRONT + 0.02]);
+    for (let i = 0; i < 8; i++) b.box(i % 2 ? WHITE : RED, [0.55, 0.05, 1.1], [-3.43 + i * 0.55, 2.98, FRONT + 0.5], [0.35, 0, 0]);
+    b.box(DARK, [4.5, 0.82, 0.08], [0, 3.58, FRONT + 0.04]); // the signboard's frame (its words: SIGNS)
+    // Capiz windows: shell panes in a wooden grid.
+    for (const x of [-2.4, 0, 2.4]) {
+      plain(b, CAPIZ, [1.4, 1.3, 0.05], [x, 5.0, FRONT + 0.02]);
+      for (let k = 1; k < 4; k++) {
+        plain(b, WOOD_DARK, [0.03, 1.3, 0.06], [x - 0.7 + k * 0.35, 5.0, FRONT + 0.04]);
+        plain(b, WOOD_DARK, [1.4, 0.03, 0.06], [x, 4.35 + k * 0.325, FRONT + 0.04]);
+      }
+      b.box(WOOD, [1.6, 0.1, 0.16], [x, 4.32, FRONT + 0.08]);
+    }
+    tank(b, [2.3, H + 0.25, FRONT - 3.6]);
+    // The rack on the sidewalk: its clothes hang from the rail and swing (sway measured from the rail).
+    const [rx, rz] = [3.0, -0.25];
+    for (const x of [rx - 0.65, rx + 0.65]) plain(b, STEEL, [0.04, 1.5, 0.04], [x, 0.75, rz]);
+    plain(b, STEEL, [1.4, 0.04, 0.04], [rx, 1.5, rz]);
+    b.place([rx, 1.5, rz], 0, () =>
+      b.sway(0.3, 1, () => [PINK, YELLOW, TEAL, ORANGE].forEach((c, i) => plain(b, c, [0.26, 0.55, 0.05], [-0.45 + i * 0.3, -0.31, 0]))),
+    );
   },
 
-  // Sprig & Stone: a plant nursery under a shade net, benches of potted plants, two big pots by the road.
+  // Sprig & Stone: a shophouse taken over by plants. A balcony of hanging pots, a shade-net awning over the shop,
+  // tiers of pots spilling onto the sidewalk, and a bamboo trellis of vines up the side wall the camera sees.
   sprig(b) {
-    b.shadow([0, -1.6], [2.2, 1.8], 2.2);
-    for (const x of [-1.6, 1.6]) for (const z of [-0.4, -2.8]) b.box(WOOD, [0.12, 2.2, 0.12], [x, 1.1, z]);
-    b.box(SHADE, [3.5, 0.06, 2.7], [0, 2.2, -1.6]);
-    for (const z of [-1.0, -2.2]) {
-      b.box(WOOD, [2.8, 0.08, 0.6], [0, 0.6, z]);
-      for (const x of [-1.3, 1.3]) b.box(WOOD_DARK, [0.08, 0.58, 0.5], [x, 0.29, z]);
-      for (let i = 0; i < 5; i++) {
-        const x = -1.1 + i * 0.55;
-        b.cyl(TERRACOTTA, [0.17, 0.12, 0.25], [x, 0.77, z]);
-        if (i % 2) b.cone(LEAF_DARK, 0.18, 0.5, [x, 1.12, z]);
-        else b.ball(LEAF, 0.22, [x, 1.0, z], [1, 0.8, 1]);
-        if (i === 2) b.ball(PINK, 0.08, [x + 0.1, 1.15, z + 0.08]);
-      }
+    const [W, D, H] = [7.4, 5, 6.0];
+    const mid = FRONT - D / 2;
+    b.shadow([0, mid], [W / 2 + 0.6, D / 2 + 0.6], H * 0.4);
+    b.box(CREAM, [W, H, D], [0, H / 2, mid]);
+    b.box(GREEN, [W + 0.2, 0.3, D + 0.2], [0, H + 0.1, mid]);
+    plain(b, DARK, [W - 1, 2.4, 0.05], [0, 1.25, FRONT + 0.01]);
+    b.box(GREEN, [W - 0.2, 0.8, 0.1], [0, 2.95, FRONT + 0.05]); // fascia, its name on a signboard (SIGNS)
+    b.box(SHADE, [W, 0.04, 1.7], [0, 2.45, FRONT + 0.85], [0.12, 0, 0]);
+    for (const x of [-W / 2 + 0.2, W / 2 - 0.2]) b.cyl(BAMBOO, [0.05, 0.06, 2.4], [x, 1.2, FRONT + 1.6], undefined, 4);
+    // The balcony, its railing, and pots hanging from its edge.
+    const floor = 3.4;
+    b.box(WOOD, [W - 0.6, 0.12, 0.9], [0, floor, FRONT + 0.45]);
+    plain(b, WOOD_DARK, [W - 0.6, 0.06, 0.06], [0, floor + 0.9, FRONT + 0.87]);
+    for (let x = -W / 2 + 0.3; x <= W / 2 - 0.3; x += 0.34) plain(b, WOOD_DARK, [0.04, 0.85, 0.04], [x, floor + 0.47, FRONT + 0.87]);
+    for (const x of [-2.4, 0, 2.4]) {
+      plain(b, GLASS, [1.0, 1.6, 0.05], [x, floor + 1.0, FRONT + 0.02]);
+      for (const s of [-1, 1]) plain(b, GREEN, [0.42, 1.6, 0.05], [x + s * 0.74, floor + 1.0, FRONT + 0.03]); // open shutters
+      b.cone(LEAF_DARK, 0.22, 0.7, [x + 0.55, floor + 0.45, FRONT + 0.4]); // plants on the balcony floor
     }
-    for (const x of [-1.25, 1.25]) {
-      b.cyl(TERRACOTTA, [0.3, 0.22, 0.45], [x, 0.23, 0.35]);
-      b.cone(LEAF_DARK, 0.3, 1.1, [x, 0.95, 0.35]);
-    }
-  },
-
-  // Lumenfold: a red-and-white lighthouse on a rock base. Its lamp and turning beam are drawn separately.
-  lumenfold(b) {
-    b.shadow([0, -1.4], [1.9, 1.9], 3);
-    b.rock(ROCK, 1.3, [0, 0.05, -1.4], [0, 0.4, 0], [1.4, 0.35, 1.4]);
-    b.rock(ROCK_DARK, 0.6, [1.3, 0.1, -0.6], [0.3, 0.2, 0]);
-    b.rock(ROCK, 0.5, [-1.2, 0.05, -2.4], [0, 0.5, 0.2]);
-    for (let i = 0; i < 4; i++) {
-      const bottom = 1.0 - 0.09 * i;
-      b.cyl(i % 2 ? RED : WHITE, [bottom - 0.09, bottom, 1.5], [0, 0.5 + 1.5 * i + 0.75, -1.4], undefined, 10);
-    }
-    b.cyl(DARK, [0.95, 0.95, 0.12], [0, 6.56, -1.4], undefined, 10); // gallery
-    for (let i = 0; i < 6; i++) b.box(DARK, [0.05, 0.75, 0.05], [Math.sin(i) * 0.45, 7.0, -1.4 + Math.cos(i) * 0.45]); // lantern frame
-    b.cone(RED, 0.65, 0.6, [0, 7.65, -1.4], undefined, 10);
-    b.ball(DARK, 0.1, [0, 8.0, -1.4]);
-    b.box(WOOD_DARK, [0.5, 0.9, 0.1], [0, 0.95, -0.42]); // door
-    for (const y of [3.0, 4.6]) b.box(DARK, [0.3, 0.4, 0.06], [0, y, -0.62 + (y - 3) * 0.05]);
-  },
-
-  // Bagyo: a weather station. A braced lattice mast with typhoon signal flags on its yard and a wind vane, a small
-  // office, and a white louvred instrument box on legs. The wind cups on top are drawn separately (they spin).
-  bagyo(b) {
-    b.shadow([0, -1.5], [2.1, 1.8], 3);
-    b.flat(() => b.box(CONCRETE, [3.8, 0.12, 3.0], [0, 0.06, -1.5]));
-    const [mx, , mz] = MAST;
-    const leg = (i: number, y: number): Vec => {
-      const a = (i * 2 * Math.PI) / 3 + 0.3, r = 0.5 - (0.4 * y) / MAST_HEIGHT; // three legs leaning in
-      return [mx + Math.sin(a) * r, y, mz + Math.cos(a) * r];
-    };
-    for (let i = 0; i < 3; i++) {
-      strut(b, STEEL, leg(i, 0.1), leg(i, MAST_HEIGHT), 0.07);
-      for (let y = 0.4; y < MAST_HEIGHT - 0.5; y += 1.05) {
-        strut(b, STEEL, leg(i, y), leg(i + 1, y), 0.035);
-        strut(b, STEEL, leg(i, y), leg(i + 1, y + 1.05), 0.03); // zigzag bracing
-      }
-    }
-    b.cyl(DARK, [0.28, 0.28, 0.06], [mx, MAST_HEIGHT + 0.03, mz], undefined, 8);
-    b.cyl(STEEL, [0.03, 0.03, 0.6], [mx, MAST_HEIGHT + 0.3, mz], undefined, 6); // spindle for the cups
-    // The yard, a wind vane off its left end, and two typhoon flags (red, black square) hoisted on the right.
-    b.box(STEEL, [1.7, 0.05, 0.05], [mx, 5.6, mz]);
-    b.box(STEEL, [0.9, 0.03, 0.03], [mx - 0.85, 6.15, mz]);
-    b.box(STEEL, [0.03, 0.55, 0.03], [mx - 0.85, 5.9, mz]);
-    b.cone(RED, 0.08, 0.22, [mx - 1.38, 6.15, mz], [0, 0, Math.PI / 2], 4);
-    b.box(RED, [0.25, 0.2, 0.02], [mx - 0.42, 6.15, mz]);
-    for (const top of [5.55, 4.95]) {
-      b.place([mx + 0.8, top, mz], 0, () =>
-        b.sway(0.14, 1, () => {
-          b.box(RED, [0.48, 0.48, 0.02], [0.26, -0.25, 0]);
-          b.box(DARK, [0.2, 0.2, 0.035], [0.26, -0.25, 0]);
+    for (let i = 0; i < 6; i++) {
+      b.place([-2.6 + i * 1.04, floor - 0.06, FRONT + 0.8], 0, () =>
+        b.sway(0.35, 1, () => {
+          plain(b, DARK, [0.012, 0.42, 0.012], [0, -0.21, 0]);
+          b.cyl(TERRACOTTA, [0.17, 0.12, 0.22], [0, -0.52, 0]);
+          b.ball(i % 2 ? LEAF : LEAF_DARK, 0.2, [0, -0.36, 0], [1, 0.8, 1]);
+          b.box(LEAF, [0.07, 0.45, 0.07], [0.1, -0.78, 0.05]); // a trailing vine
         }),
       );
     }
-    b.box(DARK, [0.012, 1.1, 0.012], [mx + 0.8, 5.0, mz]); // halyard
-    // Office: cream walls, blue roof, a dish on top.
-    b.box(CREAM, [1.5, 1.4, 1.5], [-0.95, 0.82, -1.6]);
-    b.box(BLUE, [1.75, 0.08, 1.8], [-0.95, 1.58, -1.6], [0.1, 0, 0]);
-    b.box(WOOD_DARK, [0.45, 0.95, 0.05], [-0.65, 0.6, -0.83]);
-    b.box(DARK, [0.45, 0.35, 0.05], [-1.35, 0.95, -0.83]);
-    b.box(WHITE, [1.1, 0.22, 0.05], [-0.95, 1.36, -0.82]);
-    b.box(BLUE, [0.9, 0.05, 0.06], [-0.95, 1.36, -0.79]);
-    b.cyl(STEEL, [0.03, 0.03, 0.3], [-1.3, 1.78, -1.9], undefined, 5);
-    b.cyl(WHITE, [0.22, 0.04, 0.08], [-1.3, 1.95, -1.9], [0.6, 0, 0], 10);
-    // Instrument box: white, louvred, on four legs, with a slanted lid.
-    for (const x of [1.13, 1.57]) for (const z of [-0.3, -0.7]) b.box(STEEL, [0.04, 1.0, 0.04], [x, 0.6, z]);
-    b.box(WHITE, [0.55, 0.55, 0.5], [1.35, 1.35, -0.5]);
-    for (let k = 0; k < 4; k++) b.box(ZINC, [0.48, 0.025, 0.03], [1.35, 1.15 + k * 0.12, -0.24]);
-    b.box(WHITE, [0.65, 0.05, 0.62], [1.35, 1.66, -0.5], [0.12, 0, 0]);
-  },
-
-  // Recipe Finder: a carinderia, a roadside eatery with pots of food on the counter and plastic stools.
-  recipes(b) {
-    b.shadow([0, -1.6], [2.4, 1.9], 2.5);
-    b.box(CONCRETE, [3.6, 0.15, 2.8], [0, 0.075, -1.6]);
-    for (const x of [-1.6, 1.6]) for (const z of [-0.35, -2.85]) b.box(WOOD, [0.14, 2.3, 0.14], [x, 1.15, z]);
-    b.box(RED, [3.9, 0.08, 1.65], [0, 2.52, -0.95], [-0.38, 0, 0]); // roof, two slopes
-    b.box(RED, [3.9, 0.08, 1.65], [0, 2.52, -2.25], [0.38, 0, 0]);
-    b.box(CREAM, [3.3, 1.7, 0.1], [0, 0.95, -2.8]); // back wall
-    b.box(YELLOW, [3.0, 0.9, 0.5], [0, 0.6, -0.95]); // counter
-    b.box(WOOD, [3.1, 0.06, 0.62], [0, 1.08, -0.95]);
-    for (const x of [-1.1, -0.37, 0.37, 1.1]) {
-      b.cyl(STEEL, [0.22, 0.2, 0.3], [x, 1.26, -0.95]);
-      b.cyl(DARK, [0.23, 0.23, 0.03], [x, 1.43, -0.95]);
-      b.ball(DARK, 0.04, [x, 1.47, -0.95]);
+    // Tiers of pots on the sidewalk, left of the door; two big pots to the right.
+    for (let t = 0; t < 3; t++) {
+      const [h, z] = [0.25 + t * 0.35, 0.05 - t * 0.42];
+      b.box(WOOD_DARK, [1.9, h, 0.42], [-2.5, h / 2, z]);
+      for (let k = 0; k < 4; k++) {
+        const x = -3.2 + k * 0.46;
+        b.cyl(TERRACOTTA, [0.15, 0.11, 0.22], [x, h + 0.11, z]);
+        if ((k + t) % 2) b.cone(LEAF_DARK, 0.17, 0.45, [x, h + 0.42, z]);
+        else b.ball(LEAF, 0.2, [x, h + 0.34, z], [1, 0.85, 1]);
+        if ((k + t) % 3 === 0) b.ball(PINK, 0.07, [x + 0.08, h + 0.48, z + 0.08]);
+      }
     }
-    b.box(WHITE, [1.8, 0.4, 0.06], [0, 2.0, -0.3]); // name board under the roof
-    b.box(ORANGE, [1.6, 0.08, 0.07], [0, 2.0, -0.26]);
-    for (const x of [-1, 0, 1]) b.cyl(BLUE, [0.2, 0.17, 0.45], [x, 0.23, -0.15]); // stools
-    banderitas(b, [-1.6, 2.15, -0.28], [1.6, 2.15, -0.28], 0.35); // fiesta flags along the front
+    for (const x of [2.3, 3.2]) {
+      b.cyl(TERRACOTTA, [0.3, 0.22, 0.45], [x, 0.23, -0.2]);
+      b.cone(LEAF_DARK, 0.32, 1.2, [x, 1.0, -0.2]);
+    }
+    b.box(GREEN, [0.08, 0.78, 4.2], [-W / 2 - 0.04, 5.15, FRONT - 2.5]); // the side sign's frame (SIGNS), above the trellis
+    // The bamboo trellis on the side wall facing the camera (-x), vines climbing it.
+    const sx = -W / 2 - 0.12;
+    for (const z of [-0.6, -1.8, -3.0, -4.2]) b.cyl(BAMBOO, [0.04, 0.04, 4.6], [sx, 2.3, FRONT + z + 0.4], undefined, 4);
+    for (const y of [0.9, 2.0, 3.1, 4.2]) b.cyl(BAMBOO, [0.035, 0.035, 4.0], [sx, y, FRONT - 1.6], [Math.PI / 2, 0, 0], 4);
+    let seed = 7;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    for (let k = 0; k < 16; k++) {
+      const [y, z] = [0.3 + rnd() * 4.1, FRONT + 0.2 - rnd() * 3.8];
+      const r = 0.28 + rnd() * 0.12;
+      b.place([sx - 0.06, 0, z], 0, () => b.sway(0.02, 1.5, () => b.ball(k % 3 ? LEAF : LEAF_DARK, r, [0, y, 0], [0.55, 1, 1])));
+    }
   },
 
-  // About: the jeepney terminal facing the plaza (a phase-1 stand-in): a long shed roof on posts over a queue, route
-  // boards hanging under it, rails and a bench. Its yard runs back to the bay; the pier is across the boulevard (pier() below).
+  // Lumenfold: a narrow lamp shop, every window lit and hung with lamps, a sign down its corner. The giant desk lamp on
+  // its roof turns and nods (drawn separately). Two storeys, not the plan's three, so the lamp stays in frame.
+  lumenfold(b) {
+    const [W, D, H] = [4.6, 5, LUMEN_ROOF];
+    const mid = FRONT - D / 2;
+    b.shadow([0, mid], [W / 2 + 0.6, D / 2 + 0.6], H * 0.4);
+    b.box(CREAM, [W, H, D], [0, H / 2, mid]);
+    b.box(DARK, [W + 0.2, 0.25, D + 0.2], [0, H + 0.1, mid]);
+    // The shop window: lit, three big shades hanging in it.
+    plain(b, GLOW, [W - 0.8, 2.3, 0.05], [0, 1.35, FRONT + 0.01]);
+    for (const x of [-(W / 2 - 0.35), W / 2 - 0.35]) b.box(WOOD_DARK, [0.14, 2.6, 0.14], [x, 1.3, FRONT + 0.07]);
+    b.box(WOOD_DARK, [W - 0.5, 0.14, 0.14], [0, 2.6, FRONT + 0.07]);
+    for (const x of [-1.1, 0, 1.1]) {
+      plain(b, DARK, [0.012, 0.55, 0.012], [x, 2.25, FRONT + 0.25]);
+      b.cone(DARK, 0.3, 0.34, [x, 1.82, FRONT + 0.25]);
+    }
+    // Upper floors: two lit windows each, a lamp in every one.
+    for (const [k, y0] of [3.0].entries()) {
+      for (const x of [-1.0, 1.0]) {
+        plain(b, GLOW, [1.2, 1.4, 0.05], [x, y0 + 1.1, FRONT + 0.01]);
+        b.box(WOOD, [1.35, 0.08, 0.16], [x, y0 + 0.36, FRONT + 0.08]);
+        plain(b, DARK, [0.012, 0.3, 0.012], [x, y0 + 1.65, FRONT + 0.12]);
+        b.cone(k ? RED : TEAL, 0.2, 0.24, [x, y0 + 1.4, FRONT + 0.12]);
+      }
+    }
+    b.box(DARK, [0.1, 2.5, 0.95], [W / 2 + 0.55, 4.1, FRONT - 0.1]); // the corner sign's back (its words: SIGNS)
+    for (const y of [3.1, 5.1]) plain(b, STEEL, [0.6, 0.05, 0.05], [W / 2 + 0.25, y, FRONT - 0.1]);
+    b.box(DARK, [1.4, 0.9, 1.0], [-1.2, H + 0.55, FRONT - 4.2]); // roof stair hut
+  },
+
+  // Bagyo: the PAGASA weather office. White, a blue band, a radar dome on the roof, the lattice mast beside it with its
+  // typhoon flags (its cups and the radar spin, drawn separately), and the typhoon signal board by the door (SignalBoard).
+  bagyo(b) {
+    const [W, D, H, cx] = [6.6, 5, 6.2, -1.4];
+    const mid = FRONT - D / 2;
+    b.shadow([cx, mid], [W / 2 + 0.6, D / 2 + 0.6], H * 0.4);
+    b.box(WHITE, [W, H, D], [cx, H / 2, mid]);
+    b.box(BLUE, [W + 0.06, 0.42, D + 0.06], [cx, 3.3, mid]);
+    b.box(WHITE, [W + 0.2, 0.3, D + 0.2], [cx, H + 0.1, mid]);
+    b.box(BLUE, [W + 0.22, 0.08, D + 0.22], [cx, H + 0.2, mid]);
+    plain(b, WOOD_DARK, [1.0, 2.2, 0.05], [cx - 0.6, 1.1, FRONT + 0.02]); // door
+    b.box(CONCRETE, [1.6, 0.12, 0.6], [cx - 0.6, 0.06, FRONT + 0.3]); // its step
+    plain(b, GLASS, [1.1, 1.1, 0.05], [cx - 2.4, 1.55, FRONT + 0.02]);
+    for (const x of [-2.4, -0.8, 0.8, 2.4]) {
+      plain(b, GLASS, [1.0, 1.1, 0.05], [cx + x, 4.75, FRONT + 0.02]);
+      b.box(WHITE, [1.15, 0.08, 0.14], [cx + x, 4.15, FRONT + 0.08]);
+    }
+    b.box(DARK, [2.75, 0.52, 0.06], [cx + 1.6, 1.75, FRONT + 0.03]); // the signal board's frame
+    b.box(DARK, [2.5, 0.48, 0.06], [cx - 0.6, 2.72, FRONT + 0.03]); // the name board's frame
+    // Notice board on legs on the sidewalk.
+    for (const x of [cx - 3.3, cx - 2.3]) plain(b, STEEL, [0.05, 1.4, 0.05], [x, 0.7, -0.3]);
+    b.box(WHITE, [1.2, 0.8, 0.06], [cx - 2.8, 1.45, -0.3]);
+    for (let k = 0; k < 3; k++) plain(b, ZINC, [0.9, 0.05, 0.02], [cx - 2.8, 1.65 - k * 0.2, -0.26]);
+    // The radar dome on its drum, at the front of the roof (further back, it's above the screen when you park).
+    b.cyl(CONCRETE, [0.75, 0.8, 0.6], [cx - 1.6, H + 0.55, FRONT - 1.3], undefined, 10);
+    b.ball(WHITE, 0.95, [cx - 1.6, H + 0.9, FRONT - 1.3], [1, 0.95, 1]);
+    // The mast: three legs leaning in, zigzag bracing, a yard with a wind vane and two typhoon flags.
+    b.shadow([MAST[0], MAST[2]], [0.9, 0.9], 3);
+    const [mx, , mz] = MAST;
+    const leg = (i: number, y: number): Vec => {
+      const a = (i * 2 * Math.PI) / 3 + 0.3, r = 0.7 - (0.55 * y) / MAST_HEIGHT;
+      return [mx + Math.sin(a) * r, y, mz + Math.cos(a) * r];
+    };
+    for (let i = 0; i < 3; i++) {
+      strut(b, STEEL, leg(i, 0.1), leg(i, MAST_HEIGHT), 0.08);
+      for (let y = 0.4; y < MAST_HEIGHT - 0.6; y += 1.2) {
+        strut(b, STEEL, leg(i, y), leg(i + 1, y), 0.035);
+        strut(b, STEEL, leg(i, y), leg(i + 1, y + 1.2), 0.03);
+      }
+    }
+    const top = MAST_HEIGHT;
+    b.cyl(DARK, [0.28, 0.28, 0.06], [mx, top + 0.03, mz], undefined, 8);
+    b.cyl(STEEL, [0.03, 0.03, 0.6], [mx, top + 0.3, mz], undefined, 6); // spindle for the cups
+    b.box(STEEL, [1.9, 0.05, 0.05], [mx, top - 1.4, mz]);
+    b.box(STEEL, [0.9, 0.03, 0.03], [mx - 0.95, top - 0.85, mz]);
+    b.box(STEEL, [0.03, 0.55, 0.03], [mx - 0.95, top - 1.1, mz]);
+    b.cone(RED, 0.08, 0.22, [mx - 1.48, top - 0.85, mz], [0, 0, Math.PI / 2], 4);
+    b.box(RED, [0.25, 0.2, 0.02], [mx - 0.52, top - 0.85, mz]);
+    for (const y of [top - 1.45, top - 2.1]) {
+      b.place([mx + 0.9, y, mz], 0, () =>
+        b.sway(0.14, 1, () => {
+          b.box(RED, [0.55, 0.55, 0.02], [0.3, -0.28, 0]);
+          b.box(DARK, [0.22, 0.22, 0.035], [0.3, -0.28, 0]);
+        }),
+      );
+    }
+    plain(b, DARK, [0.012, 1.3, 0.012], [mx + 0.9, top - 2.05, mz]); // halyard
+  },
+
+  // Recipe Finder: a carinderia. A single-storey eatery under a big scalloped tarpaulin on poles: a counter of steel pots
+  // (steam rises from them, drawn separately), a menu board, blue plastic tables and stools on the sidewalk.
+  recipes(b) {
+    const [W, D, H] = [7.2, 4.2, 3.5];
+    const back = FRONT - 0.8; // the room sits back under the tarp
+    const mid = back - D / 2;
+    b.shadow([0, mid + 0.6], [W / 2 + 0.7, D / 2 + 1.2], H * 0.4);
+    b.box(CREAM, [W, H, D], [0, H / 2, mid]);
+    b.box(ZINC, [W + 0.3, 0.08, D + 0.3], [0, H + 0.04, mid]);
+    plain(b, DARK, [W - 1.2, 2.4, 0.05], [0, 1.3, back + 0.01]);
+    b.flat(() => b.box(CONCRETE, [W + 0.4, 0.06, 1.2], [0, 0.03, back + 0.6])); // the floor under the tarp
+    b.box(YELLOW, [W - 1.6, 1.0, 0.6], [0, 0.55, FRONT - 0.45]); // counter
+    b.box(STEEL, [W - 1.5, 0.05, 0.66], [0, 1.07, FRONT - 0.45]);
+    for (const [x, y, z] of POTS) {
+      b.cyl(STEEL, [0.24, 0.22, 0.32], [x, y - 0.18, z], undefined, 10);
+      b.cyl(DARK, [0.25, 0.25, 0.03], [x, y - 0.01, z], undefined, 10);
+      b.ball(DARK, 0.04, [x, y + 0.03, z]);
+    }
+    // Menu board on the wall: dark slate, chalk lines.
+    b.box(WOOD_DARK, [1.0, 0.8, 0.06], [2.6, 2.15, back + 0.04]);
+    for (let k = 0; k < 4; k++) plain(b, WHITE, [0.65 - (k % 2) * 0.2, 0.04, 0.02], [2.55, 2.4 - k * 0.16, back + 0.08]);
+    // The tarp: one big sheet sloping out from the wall over the sidewalk, scalloped along its front edge, on poles.
+    const edge = 0.15;
+    const [y0, y1] = [3.3, 2.55];
+    const run = Math.hypot(edge - back, y0 - y1);
+    b.box(TARP, [W + 1, 0.04, run], [0, (y0 + y1) / 2, (back + edge) / 2], [Math.atan2(y0 - y1, edge - back), 0, 0]);
+    for (let k = 0; k < 13; k++) b.cyl(TARP, [0.32, 0.32, 0.03], [-(W + 1) / 2 + 0.32 + k * 0.6, y1, edge], [Math.PI / 2, 0, 0], 8);
+    b.box(WHITE, [W + 1, 0.06, 0.05], [0, y1 + 0.02, edge + 0.02]);
+    for (const x of [-(W / 2 + 0.3), 0, W / 2 + 0.3]) plain(b, STEEL, [0.05, y1, 0.05], [x, y1 / 2, edge - 0.05]);
+    b.box(DARK, [3.6, 0.62, 0.06], [-0.6, 3.0, back + 0.03]); // its name board's frame (SIGNS)
+    b.box(DARK, [0.06, 0.6, 3.1], [W / 2 + 0.03, 2.1, FRONT - 3.4]); // and on the side wall the camera sees
+    // Blue plastic tables and stools on the sidewalk.
+    for (const tx of [-2.6, 2.6]) {
+      b.shadow([tx, -0.2], [0.7, 0.6], 0.8);
+      b.box(BLUE, [0.85, 0.05, 0.85], [tx, 0.72, -0.2]);
+      for (const [dx, dz] of [[-0.35, -0.35], [0.35, -0.35], [-0.35, 0.35], [0.35, 0.35]]) plain(b, BLUE, [0.04, 0.7, 0.04], [tx + dx, 0.35, -0.2 + dz]);
+      for (const dx of [-0.75, 0.75]) b.cyl(BLUE, [0.18, 0.15, 0.42], [tx + dx, 0.21, -0.2], undefined, 8);
+    }
+  },
+
+  // About: the jeepney terminal, where every route starts and ends. A long shed roof over a queue, route boards hanging
+  // from it (SIGNS), queue rails, a dispatcher's booth, and jeepneys parked waiting for passengers. Its yard runs back to
+  // the bay boulevard; the pier is across it (pier() below).
   about(b) {
-    b.shadow([0, -2.5], [4.6, 2.6], 3);
-    for (const x of [-4, -1.3, 1.3, 4]) for (const z of [-0.6, -4.4]) b.box(STEEL, [0.14, 3.2, 0.14], [x, 1.6, z]);
-    b.box(BLUE, [9.6, 0.12, 5.6], [0, 3.25, -2.5], [0.08, 0, 0]);
-    for (const x of [-2.6, 0, 2.6]) b.box(YELLOW, [2, 0.4, 0.06], [x, 2.6, -0.6]);
-    for (const z of [-1.8, -3]) b.box(STEEL, [6, 0.05, 0.05], [0, 0.9, z]);
-    b.box(CONCRETE, [6, 0.1, 0.5], [0, 0.45, -4]);
-    banderitas(b, [-4, 3.0, -0.55], [4, 3.0, -0.55], 0.3, 12);
+    const [front, back] = [-0.6, -7.2];
+    const mid = (front + back) / 2;
+    b.shadow([0, mid], [6.4, 3.6], 3);
+    for (const x of [-5.6, -1.9, 1.9, 5.6]) {
+      for (const z of [front, back]) b.box(STEEL, [0.14, 3.8, 0.14], [x, 1.9, z]);
+    }
+    b.box(BLUE, [12.2, 0.14, 7.4], [0, 3.95, mid], [-0.07, 0, 0]); // the shed roof, rising a little to the back
+    b.box(RED, [12.2, 0.25, 0.08], [0, 3.62, front + 0.12]);
+    for (const x of [-3.6, 3.6]) {
+      for (const dx of [-0.9, 0.9]) plain(b, DARK, [0.015, 0.5, 0.015], [x + dx, 3.25, front + 0.05]);
+      b.box(DARK, [2.4, 0.46, 0.06], [x, 2.85, front + 0.05]); // a route board's frame (SIGNS)
+    }
+    // The queue rails and the waiting bench, on the left; the dispatcher's booth by them.
+    for (const z of [-1.6, -2.4]) plain(b, STEEL, [3.8, 0.05, 0.05], [-3.6, 0.95, z]);
+    for (const x of [-5.4, -3.6, -1.8]) for (const z of [-1.6, -2.4]) plain(b, STEEL, [0.05, 0.95, 0.05], [x, 0.48, z]);
+    b.box(CONCRETE, [3.6, 0.1, 0.5], [-3.6, 0.45, -6.5]);
+    for (const x of [-5, -2.2]) b.box(CONCRETE, [0.12, 0.42, 0.42], [x, 0.21, -6.5]);
+    b.box(WOOD, [1.3, 2.3, 1.3], [-4.6, 1.15, -4.2]);
+    plain(b, GLASS, [0.9, 0.6, 0.04], [-4.6, 1.5, -3.53]);
+    b.box(BLUE, [1.6, 0.1, 1.6], [-4.6, 2.35, -4.2]);
+    // Jeepneys waiting under the shed, noses to the street, and one more out in the yard.
+    for (const x of [0.4, 3.4]) b.place([x, 0, -3.9], 0, () => parkedJeepney(b));
+    b.place([-3.2, 0, -10.2], 0.5, () => parkedJeepney(b));
+    banderitas(b, [-5.6, 3.5, front + 0.05], [5.6, 3.5, front + 0.05], 0.35, 14);
   },
 };
 
@@ -387,9 +576,9 @@ function buildBangka(b: Batch) {
   for (const z of [-0.9, 0.9]) b.cyl(BAMBOO, [0.05, 0.05, 3.9], [0, 0.3, z], [0, 0, Math.PI / 2], 6);
 }
 
-const lighthouse = frameOf("lumenfold");
-
+const lumenfold = frameOf("lumenfold");
 const station = frameOf("bagyo");
+const carinderia = frameOf("recipes");
 
 /** The wind cups on top of the weather mast: three arms, a cup on each, turned to catch the wind. */
 function buildCups(b: Batch) {
@@ -402,11 +591,38 @@ function buildCups(b: Batch) {
   }
 }
 
-const BEAM_LENGTH = 7;
-const BEAM = new ConeGeometry(0.9, BEAM_LENGTH, 16, 1, true);
+/** The weather office's radar: a dish on a post, tipped up a little, turning on the roof. */
+const RADAR: Vec = [0.9, 6.45, FRONT - 1.1];
+function buildRadar(b: Batch) {
+  b.cyl(STEEL, [0.06, 0.09, 0.7], [0, 0.35, 0], undefined, 6);
+  b.cyl(WHITE, [0.55, 0.12, 0.2], [0, 0.95, 0.05], [Math.PI / 2 - 0.3, 0, 0], 10); // wide face forward
+  b.box(DARK, [0.04, 0.04, 0.5], [0, 1.0, 0.3]); // its feed
+}
+
+/** Lumenfold's lamp, the part that turns: a turntable and the paired lower arms up to the elbow. */
+function buildLampBase(b: Batch) {
+  b.cyl(DARK, [0.8, 0.9, 0.25], [0, 0.12, 0], undefined, 12);
+  b.cyl(DARK, [0.25, 0.3, 0.3], [0, 0.4, 0], undefined, 8);
+  for (const x of [-0.13, 0.13]) strut(b, DARK, [x, 0.45, 0], [x, LAMP_ELBOW[1], LAMP_ELBOW[2]], 0.12);
+  strut(b, STEEL, [0, 0.6, 0.15], [0, LAMP_ELBOW[1] - 0.4, LAMP_ELBOW[2] - 0.05], 0.05); // the spring
+}
+
+/** ...and the part that nods, from the elbow: the upper arms and the red shade, opening along SHADE_DIR. */
+function buildLampHead(b: Batch) {
+  b.ball(RED, 0.24, [0, 0, 0]);
+  for (const x of [-0.13, 0.13]) strut(b, DARK, [x, 0, 0], [x, LAMP_SHADE[1], LAMP_SHADE[2]], 0.11);
+  b.ball(RED, 0.2, LAMP_SHADE);
+  const at = new Vector3(...LAMP_SHADE).addScaledVector(SHADE_DIR, 0.35);
+  b.cone(RED, 0.8, 0.9, [at.x, at.y, at.z], [SHADE_TILT - Math.PI / 2, 0, 0], 12);
+}
+const BULB = new Vector3(...LAMP_SHADE).addScaledVector(SHADE_DIR, 0.7);
+
+const BEAM_LENGTH = 9;
+const BEAM = new ConeGeometry(1.6, BEAM_LENGTH, 16, 1, true);
+const BEAM_AT = BULB.clone().addScaledVector(SHADE_DIR, BEAM_LENGTH / 2);
 
 /**
- * The lighthouse beam's shader: brightest at the lamp and fading out along its length, soft at its edges
+ * The lamp beam's shader: brightest at the lamp and fading out along its length, soft at its edges
  * (where you look across the cone's side instead of through it, it fades, so it reads as a shaft of light,
  * not a plastic cone), with faint dust drifting out along it. Additive, so it only ever brightens what's behind.
  */
@@ -440,33 +656,121 @@ const beamMaterial = () =>
     side: DoubleSide,
   });
 
-/** A soft round glow (white centre fading to clear), drawn once into a small canvas: the lamp's halo. */
-function glowTexture() {
+/** A soft round glow (`rgb` in the centre fading to clear), drawn once into a small canvas: the lamp's halo, the steam's puffs. */
+function glowTexture(rgb = "255,240,200") {
   const c = document.createElement("canvas");
   c.width = c.height = 64;
   const g = c.getContext("2d")!;
   const fill = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-  fill.addColorStop(0, "rgba(255,246,216,1)");
-  fill.addColorStop(0.25, "rgba(255,232,170,0.55)");
-  fill.addColorStop(1, "rgba(255,220,150,0)");
+  fill.addColorStop(0, `rgba(${rgb},1)`);
+  fill.addColorStop(0.3, `rgba(${rgb},0.5)`);
+  fill.addColorStop(1, `rgba(${rgb},0)`);
   g.fillStyle = fill;
   g.fillRect(0, 0, 64, 64);
   return new CanvasTexture(c);
 }
 
-// The lamp in world space, and scratch vectors for the halo (no allocations in the frame loop).
-const LAMP = new Vector3(0, 7, -1.4).applyAxisAngle(new Vector3(0, 1, 0), lighthouse.yaw).add(new Vector3(...lighthouse.at));
-const beamAxis = new Vector3();
+/**
+ * Steam off the carinderia's pots: a few soft puffs per pot, as one points mesh. They drift out towards the street as
+ * they rise, so they billow from under the tarp's edge (seen from above, the tarp hides the pots).
+ */
+const PUFFS = 5;
+function steamGeometry() {
+  const n = POTS.length * PUFFS;
+  const g = new BufferGeometry();
+  g.setAttribute("position", new BufferAttribute(new Float32Array(n * 3), 3));
+  g.setAttribute("color", new BufferAttribute(new Float32Array(n * 4).fill(1), 4)); // alpha per puff
+  rise(g, 0);
+  return g;
+}
+function rise(g: BufferGeometry, t: number) {
+  const pos = g.attributes.position as BufferAttribute;
+  const col = g.attributes.color as BufferAttribute;
+  for (let i = 0; i < pos.count; i++) {
+    const [x, y, z] = POTS[Math.floor(i / PUFFS)];
+    const f = (t * 0.32 + (i % PUFFS) / PUFFS + Math.floor(i / PUFFS) * 0.13) % 1; // 0 leaving the pot, 1 gone
+    pos.setXYZ(i, x + Math.sin(t * 1.7 + i * 2.3) * 0.2 * f, y + 0.1 + f * 2.1, z + f * 2.6 + Math.cos(t * 1.3 + i) * 0.08 * f);
+    col.setW(i, Math.sin(f * Math.PI) * 0.65);
+  }
+  pos.needsUpdate = true;
+  col.needsUpdate = true;
+}
+
+/** Shop signs with real words, on the yellow plate the jeepney's route sign uses, each in its stop's frame. */
+const SIGNS: { id: string; text: string; at: Vec; width: number; yaw?: number; upright?: boolean }[] = [
+  { id: "fashionhub", text: "FashionHub · Ukay-ukay", at: [0, 3.58, FRONT + 0.09], width: 4.3 },
+  { id: "sprig", text: "Sprig & Stone · Plants", at: [0, 2.95, FRONT + 0.11], width: 4.4 },
+  { id: "sprig", text: "Sprig & Stone", at: [-3.79, 5.15, FRONT - 2.5], width: 4.0, yaw: -Math.PI / 2 }, // on the side the camera sees
+  { id: "lumenfold", text: "Lumenfold Lamps", at: [2.91, 4.1, FRONT - 0.1], width: 2.35, yaw: Math.PI / 2, upright: true },
+  { id: "lumenfold", text: "Lumenfold Lamps", at: [2.79, 4.1, FRONT - 0.1], width: 2.35, yaw: -Math.PI / 2, upright: true },
+  { id: "bagyo", text: "PAGASA", at: [-2.0, 2.72, FRONT + 0.07], width: 2.4 },
+  { id: "recipes", text: "Carinderia", at: [-0.6, 3.0, FRONT - 0.73], width: 3.5 },
+  { id: "recipes", text: "Carinderia · Lutong Bahay", at: [3.69, 2.1, FRONT - 3.4], width: 2.9, yaw: Math.PI / 2 }, // the side the camera sees
+  { id: "about", text: "Plaza · Bay", at: [-3.6, 2.85, -0.51], width: 2.3 },
+  { id: "about", text: "Terminal · Pier", at: [3.6, 2.85, -0.51], width: 2.3 },
+];
+const SIGN_ASPECT = 512 / 80; // routeSign's canvas
+
+function Signboard({ text, at, width, yaw = 0, upright = false }: Omit<(typeof SIGNS)[number], "id">) {
+  const sign = useMemo(() => {
+    const s = makeRouteSign();
+    s.show(text);
+    return s;
+  }, [text]);
+  return (
+    <mesh position={at} rotation={[0, yaw, upright ? -Math.PI / 2 : 0]}>
+      <planeGeometry args={[width, width / SIGN_ASPECT]} />
+      <meshBasicMaterial map={sign.texture} />
+    </mesh>
+  );
+}
+
+/**
+ * The typhoon signal board by the weather office's door. Park there and it steps up from Signal No. 1 to No. 5,
+ * the scale Bagyo scrolls through; drive off and it drops back to 1.
+ */
+function SignalBoard({ nearId }: { nearId: string | null }) {
+  const sign = useMemo(() => {
+    const s = makeRouteSign();
+    s.show("Signal No. 1");
+    return s;
+  }, []);
+  const since = useRef(-1);
+  useFrame(({ clock }) => {
+    if (nearId !== "bagyo") {
+      since.current = -1;
+      sign.show("Signal No. 1");
+      return;
+    }
+    if (since.current < 0) since.current = clock.elapsedTime;
+    sign.show(`Signal No. ${Math.min(5, 1 + Math.floor((clock.elapsedTime - since.current) / 0.8))}`);
+  });
+  return (
+    <mesh position={[0.2, 1.75, FRONT + 0.07]}>
+      <planeGeometry args={[2.6, 2.6 / SIGN_ASPECT]} />
+      <meshBasicMaterial map={sign.texture} />
+    </mesh>
+  );
+}
+
+// Scratch vectors for the lamp's halo (no allocations in the frame loop).
+const bulbWorld = new Vector3();
+const beamWorld = new Vector3();
 const toCamera = new Vector3();
 
 /** The stops' landmarks, palms, rocks and props. A click on a landmark drives to that stop and opens it. */
-export function Landmarks({ onStop }: { onStop: (id: string) => void }) {
-  const beam = useRef<Group>(null!);
+export function Landmarks({ onStop, nearId }: { onStop: (id: string) => void; nearId: string | null }) {
+  const lampBase = useRef<Group>(null!);
+  const lampHead = useRef<Group>(null!);
+  const bulb = useRef<Mesh>(null!);
   const boat = useRef<Group>(null!);
   const cups = useRef<Group>(null!);
+  const radar = useRef<Group>(null!);
   const halo = useRef<SpriteMaterial>(null!);
   const beamShader = useMemo(beamMaterial, []);
-  const glow = useMemo(glowTexture, []);
+  const glow = useMemo(() => glowTexture(), []);
+  const steam = useMemo(steamGeometry, []);
+  const puff = useMemo(() => glowTexture("255,255,255"), []);
   const calm = useCalm();
   // The "go" cursor goes on the canvas, not the page: scrolling away from a hovered landmark fires no
   // "pointer out", and a body cursor would then stick over the project list.
@@ -474,16 +778,21 @@ export function Landmarks({ onStop }: { onStop: (id: string) => void }) {
   const setCursor = (c: string) => () => (canvas.style.cursor = c);
 
   useFrame(({ clock, camera }, delta) => {
-    // The halo flares as the beam swings past the camera (either end of it: the beam shines both ways).
-    beamAxis.setFromMatrixColumn(beam.current.matrixWorld, 0).setY(0).normalize();
-    toCamera.copy(camera.position).sub(LAMP).setY(0).normalize();
-    halo.current.opacity = 0.35 + 0.65 * Math.abs(beamAxis.dot(toCamera)) ** 6;
-    if (calm.current) return; // reduced motion: the beam, the boat, the cups and the wind hold still
+    // The halo flares when the lamp points towards the camera.
+    bulbWorld.setFromMatrixPosition(bulb.current.matrixWorld);
+    beamWorld.copy(SHADE_DIR).transformDirection(lampHead.current.matrixWorld);
+    toCamera.copy(camera.position).sub(bulbWorld).normalize();
+    halo.current.opacity = 0.35 + 0.65 * Math.max(0, beamWorld.dot(toCamera)) ** 3;
+    if (calm.current) return; // reduced motion: the lamp, the boat, the cups, the radar, the steam and the wind hold still
     const t = clock.elapsedTime;
     const dt = Math.min(delta, 1 / 20);
     WIND.value += dt; // drives the swaying plants and flags, the cloud shadows and the beam's dust
     cups.current.rotation.y -= dt * 5;
-    beam.current.rotation.y += dt * 0.9;
+    radar.current.rotation.y += dt * 1.1;
+    // The lamp looks slowly from side to side over its street, nodding as it goes.
+    lampBase.current.rotation.y = Math.sin(t * 0.25) * 0.8;
+    lampHead.current.rotation.x = Math.sin(t * 0.45) * 0.15;
+    rise(steam, t);
     boat.current.position.y = Math.sin(t * 1.3) * 0.06;
     boat.current.rotation.z = Math.sin(t * 1.1) * 0.04;
     boat.current.rotation.x = Math.sin(t * 0.9 + 1) * 0.02;
@@ -494,43 +803,71 @@ export function Landmarks({ onStop }: { onStop: (id: string) => void }) {
       <Batched build={buildScenery} fade />
 
       {/* Click areas: invisible (no draw call) cylinders over each landmark's footprint. */}
-      {stops.map((s, i) => (
-        <mesh
-          key={s.id}
-          position={[LANDMARKS[i].x, 1.5, LANDMARKS[i].z]}
-          onClick={(e) => {
-            e.stopPropagation();
-            onStop(s.id);
-          }}
-          onPointerOver={setCursor("var(--cursor-go)")}
-          onPointerOut={setCursor("")}
-        >
-          <cylinderGeometry args={[LANDMARKS[i].r, LANDMARKS[i].r, s.id === "lumenfold" || s.id === "bagyo" ? 16 : 4, 8]} />
-          <meshBasicMaterial visible={false} />
-        </mesh>
-      ))}
+      {stops.map((s, i) => {
+        const height = s.id === "lumenfold" || s.id === "bagyo" ? 16 : 7;
+        return (
+          <mesh
+            key={s.id}
+            position={[LANDMARKS[i].x, height / 2, LANDMARKS[i].z]}
+            onClick={(e) => {
+              e.stopPropagation();
+              onStop(s.id);
+            }}
+            onPointerOver={setCursor("var(--cursor-go)")}
+            onPointerOut={setCursor("")}
+          >
+            <cylinderGeometry args={[LANDMARKS[i].r, LANDMARKS[i].r, height, 8]} />
+            <meshBasicMaterial visible={false} />
+          </mesh>
+        );
+      })}
 
-      {/* Lighthouse lamp and its slowly turning beam (glow only: no light source, so it costs nothing to shade). */}
-      <group position={lighthouse.at} rotation-y={lighthouse.yaw}>
-        <mesh position={[0, 7.0, -1.4]}>
-          <cylinderGeometry args={[0.42, 0.42, 0.7, 10]} />
-          <meshBasicMaterial color="#ffe38a" />
-        </mesh>
-        <sprite position={[0, 7.0, -1.4]} scale={2.6}>
-          <spriteMaterial ref={halo} map={glow} blending={AdditiveBlending} depthWrite={false} transparent />
-        </sprite>
-        <group ref={beam} position={[0, 7.0, -1.4]}>
-          {[1, -1].map((side) => (
-            <mesh key={side} geometry={BEAM} material={beamShader} position-x={side * (BEAM_LENGTH / 2)} rotation-z={(side * Math.PI) / 2} />
-          ))}
+      {SIGNS.map(({ id, ...sign }) => {
+        const { at, yaw } = frameOf(id);
+        return (
+          <group key={id + sign.at.join()} position={at} rotation-y={yaw}>
+            <Signboard {...sign} />
+          </group>
+        );
+      })}
+      <group position={station.at} rotation-y={station.yaw}>
+        <SignalBoard nearId={nearId} />
+      </group>
+
+      {/* Lumenfold's giant desk lamp: it turns on its turntable and nods at the elbow, its beam sweeping the street
+          (glow only: no light source, so it costs nothing to shade). */}
+      <group position={lumenfold.at} rotation-y={lumenfold.yaw}>
+        <group ref={lampBase} position={LAMP_BASE}>
+          <Batched build={buildLampBase} ao={false} />
+          <group ref={lampHead} position={LAMP_ELBOW}>
+            <Batched build={buildLampHead} ao={false} />
+            <mesh ref={bulb} position={BULB}>
+              <sphereGeometry args={[0.3, 12, 8]} />
+              <meshBasicMaterial color="#fff3c4" />
+            </mesh>
+            <sprite position={BULB} scale={3}>
+              <spriteMaterial ref={halo} map={glow} blending={AdditiveBlending} depthWrite={false} transparent />
+            </sprite>
+            <mesh geometry={BEAM} material={beamShader} position={BEAM_AT} rotation-x={SHADE_TILT - Math.PI / 2} />
+          </group>
         </group>
       </group>
 
-      {/* The weather station's wind cups, spinning on top of its mast. */}
+      {/* The weather station's wind cups, spinning on top of its mast, and the radar turning on the office roof. */}
       <group position={station.at} rotation-y={station.yaw}>
         <group ref={cups} position={[MAST[0], MAST_HEIGHT + 0.6, MAST[2]]}>
           <Batched build={buildCups} ao={false} />
         </group>
+        <group ref={radar} position={RADAR}>
+          <Batched build={buildRadar} ao={false} />
+        </group>
+      </group>
+
+      {/* Steam off the carinderia's pots. */}
+      <group position={carinderia.at} rotation-y={carinderia.yaw}>
+        <points geometry={steam}>
+          <pointsMaterial map={puff} size={1.1} vertexColors transparent depthWrite={false} />
+        </points>
       </group>
 
       {/* The bangka, moored beside the end of the pier, rocking on the water. */}

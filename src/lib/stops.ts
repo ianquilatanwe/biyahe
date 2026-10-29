@@ -18,7 +18,7 @@ export const stops: Stop[] = [
   {
     id: "fashionhub",
     name: "FashionHub",
-    landmark: "Sari-sari store",
+    landmark: "Ukay-ukay boutique",
     title: "FashionHub product listing",
     blurb: "A Figma product listing page built in Next.js on a live product API: search, filters, sorting, a working cart and offline support.",
     stack: "Next.js · TypeScript · Tailwind CSS",
@@ -31,7 +31,7 @@ export const stops: Stop[] = [
   {
     id: "sprig",
     name: "Sprig & Stone",
-    landmark: "Plant nursery",
+    landmark: "Plant shop",
     title: "Sprig & Stone landing page",
     blurb: "A six-section landing page for a made-up plant shop: FAQ, contact form and a 0-violation accessibility check.",
     stack: "Next.js · TypeScript · Tailwind CSS",
@@ -44,7 +44,7 @@ export const stops: Stop[] = [
   {
     id: "lumenfold",
     name: "Lumenfold",
-    landmark: "Lighthouse",
+    landmark: "Lamp shop",
     title: "Lumenfold motion demo",
     blurb: "A scroll-driven launch page for a made-up desk lamp: a pinned dusk-to-night scene and a shared-element finish picker.",
     stack: "Next.js · Motion · Tailwind CSS",
@@ -57,7 +57,7 @@ export const stops: Stop[] = [
   {
     id: "bagyo",
     name: "Bagyo",
-    landmark: "Weather station",
+    landmark: "PAGASA office",
     title: "Bagyo typhoon demo",
     blurb: "Scroll up into a typhoon drawn by one WebGL shader: rain and spiral clouds build through the five PAGASA signals, then the eye opens onto blue sky. Hold to call lightning; the sound is made in code.",
     stack: "Next.js · WebGL2 shader · Web Audio",
@@ -83,7 +83,7 @@ export const stops: Stop[] = [
   {
     id: "about",
     name: "About Ian", // "Pier" alone didn't say what's there
-    landmark: "Pier",
+    landmark: "Jeepney terminal",
     title: "About Ian",
     blurb: "Frontend developer in the Philippines (UTC+8). Figma to UI, bug fixes, API wiring and responsive layouts, in React, Next.js and Flutter.",
     stack: "React · Next.js · TypeScript · Tailwind CSS · Flutter",
@@ -94,7 +94,7 @@ export const stops: Stop[] = [
   },
 ];
 
-/** The red strip on a stop's card: "Stop 2 · Plant nursery", or "Last stop · Pier" for the about stop. */
+/** The red strip on a stop's card: "Stop 2 · Plant shop", or "Last stop · Jeepney terminal" for the about stop. */
 export function stopLabel(stop: Stop) {
   return stop.id === "about" ? `Last stop · ${stop.landmark}` : `Stop ${stops.indexOf(stop) + 1} · ${stop.landmark}`;
 }

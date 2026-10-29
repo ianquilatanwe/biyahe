@@ -3,7 +3,7 @@
 import type { ThreeEvent } from "@react-three/fiber";
 import { reachable } from "@/lib/driving";
 import { stops } from "@/lib/stops";
-import { BLOCK_HALF, BLOCKS, EDGE, LANDMARKS, OBSTACLES, SHORE_Z, site, STREET_HALF, STREETS, type Point } from "@/lib/world";
+import { BLOCK_HALF, BLOCKS, EDGE, LOTS, OBSTACLES, SHORE_Z, site, STREET_HALF, STREETS, type Point } from "@/lib/world";
 import { Batched, type Batch, type Vec } from "./Batched";
 import { banderitas, strut } from "./Landmarks";
 import { paint } from "./paint";
@@ -37,9 +37,9 @@ function seeded(seed: number) {
   return () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 }
 
-/** A building plot that a stop's landmark already stands on (its footprint plus room round it). */
+/** A building plot inside a stop's lot (world.ts), left empty for its landmark. */
 const taken = (x0: number, z0: number, x1: number, z1: number) =>
-  LANDMARKS.some((l) => x1 > l.x - l.r - 1.2 && x0 < l.x + l.r + 1.2 && z1 > l.z - l.r - 1.2 && z0 < l.z + l.r + 1.2);
+  LOTS.some((l) => x1 > l.x - l.hx && x0 < l.x + l.hx && z1 > l.z - l.hz && z0 < l.z + l.hz);
 
 /**
  * A block: kerb, sidewalk, then shophouses filling its middle. The middle is split into a north and a south row,

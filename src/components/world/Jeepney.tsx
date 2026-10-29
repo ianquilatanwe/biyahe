@@ -161,6 +161,26 @@ function buildBody(b: Batch) {
 }
 
 /**
+ * A parked jeepney merged into a scene's batch (the terminal yard's): the same body, its wheels as plain cylinders, and
+ * painted stripes and a route board in place of the side art and sign textures. Costs no draw calls of its own.
+ */
+export function parkedJeepney(b: Batch) {
+  b.shadow([0, 0.1], [1.5, 3.1], 1.2);
+  buildBody(b);
+  for (const [x, z] of [[TRACK, FRONT_AXLE], [-TRACK, FRONT_AXLE], [TRACK, REAR_AXLE], [-TRACK, REAR_AXLE]]) {
+    b.cyl(TYRE, [WHEEL_R, WHEEL_R, 0.3], [x, WHEEL_R, z], [0, 0, Math.PI / 2], 12);
+    b.cyl(CHROME, [0.22, 0.22, 0.02], [x + Math.sign(x) * 0.16, WHEEL_R, z], [0, 0, Math.PI / 2], 10);
+  }
+  const length = ART.front - ART.back;
+  const mid = (ART.front + ART.back) / 2;
+  for (const side of [1, -1]) {
+    b.box(RED, [0.02, 0.1, length], [side * 1.02, ART.bottom + 0.14, mid]);
+    b.box(BLUE, [0.02, 0.06, length], [side * 1.02, ART.bottom + 0.28, mid]);
+  }
+  b.box("#ffc93c", [1.66, 0.26, 0.02], [0, 1.86, 2.01]);
+}
+
+/**
  * The painted sides: a plane on each stainless side panel, both drawn with one canvas texture (one draw call).
  * Lit like the body, and cut out where the canvas is clear (the wheel arch).
  */

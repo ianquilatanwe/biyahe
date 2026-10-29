@@ -13,7 +13,8 @@ everything is built from code primitives (Ian chose code over Blender for the je
   Components only draw and wire input.
 - **One source of truth for layout:** the street grid (`STREETS`, `BLOCKS`, `EDGE`, `SHORE_Z`), the block colliders
   (`BLOCK_BOXES`), each stop's `site()` (block + the side it faces → kerb front, model origin, yaw, parking spot) and
-  the sign/click circles (`FOOTPRINTS` → `LANDMARKS`) live in `src/lib/world.ts`. Change a model in `Landmarks.tsx`,
+  the sign/click circles (`FOOTPRINTS` → `LANDMARKS`) and the plot each stop claims (`lot` → `LOTS`, which the town's
+  shophouses leave empty) live in `src/lib/world.ts`. Change a model in `Landmarks.tsx`,
   change its footprint too, then run the check (it drives the real town).
   The drawing and the logic both import them, so what you see is where things collide.
 - **Content in `src/lib/stops.ts`.** The 3D stops and the HTML project list read the same data.
@@ -83,7 +84,7 @@ everything is built from code primitives (Ian chose code over Blender for the je
   after the sRGB step. The sea's foam breaks along the seawall at `SHORE_Z`.
 - No real-time shadows: fake soft shadows with a dark transparent disc.
 - Measure with `renderer.info.render.calls` before optimising; merge or instance static props when
-  the count climbs (town budget: ≤ 60 draw calls, ≤ 400k triangles; phase 2 is 27 and ~225k).
+  the count climbs (town budget: ≤ 60 draw calls, ≤ 400k triangles; phase 3 is ~29 and ~275k).
 - No new texture or model files unless they're small (whole scene under 1 MB of assets).
 
 ## The HTML layer (signboard style)
@@ -107,6 +108,12 @@ everything is built from code primitives (Ian chose code over Blender for the je
   tail lifts one end of the base off the plate.
 - Signs stay below the header by measuring it (`data-hud-header`, a ResizeObserver): it wraps to two rows on phones
   and at 768. Off-screen signs that would land on each other step along their edge (`spots` in `StopSigns.tsx`).
+- **What the camera sees of a stop when parked:** its facade up to ~8 m, nothing behind the roof's front edge. So moving
+  or landmark roof parts sit at the front of the roof (Lumenfold's lamp reaches out over the sidewalk; Bagyo's dome and
+  radar are at the roof's front), and the two sideways-facing stops (Sprig, Recipe Finder) carry a second sign on the
+  side wall the camera sees. Stop facades stand on `FRONT` (2 m back from the kerb, level with the shophouses).
+- Shop signs with words are `makeRouteSign` planes (`SIGNS` in `Landmarks.tsx`, one draw call each); Bagyo's
+  `SignalBoard` steps Signal No. 1 → 5 while you're parked there.
 - Electric poles and wires run only along north–south streets: east–west wires cut across the screen in front of the
   jeepney. Poles keep 6 m clear of every stop's front.
 

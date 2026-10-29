@@ -175,7 +175,7 @@ export default function World({ active, onGoTo, onGoToStop, nearId, onOpen, onRe
       <hemisphereLight args={["#f3f6ff", "#a39a8a", 1.25]} />
       <directionalLight position={[-26, 22, 14]} intensity={2.25} color="#ffe9cc" />
       <Town onGround={onGoTo} />
-      <Landmarks onStop={onGoToStop} />
+      <Landmarks onStop={onGoToStop} nearId={nearId} />
       <Driver {...driver} />
       <TapMarker destination={driver.destination} />
       <StopSigns nearId={nearId} onStop={onGoToStop} onOpen={onOpen} />

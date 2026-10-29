@@ -69,17 +69,27 @@ export function parkingSpot(id: string): Point {
 }
 
 /**
- * Each landmark's size as a circle, for its sign and its click area (the kerb is the wall, not this):
- * `out` is how far its centre sits behind its frame's origin, `r` its radius. Keep in step with the models in Landmarks.tsx.
+ * Each landmark's size, in its own frame. `out` is how far its middle sits behind its frame's origin and `r` the radius
+ * round it, for its sign and its click area (the kerb is the wall, not this). `lot` is the ground it claims, as
+ * [width along the street, depth back from the kerb]: the town leaves those plots for it. Keep in step with Landmarks.tsx.
  */
-export const FOOTPRINTS: Record<string, { out: number; r: number }> = {
-  fashionhub: { out: 1.6, r: 2.4 },
-  sprig: { out: 1.6, r: 2.5 },
-  lumenfold: { out: 1.4, r: 1.9 },
-  bagyo: { out: 1.4, r: 2.0 },
-  recipes: { out: 1.6, r: 2.4 },
-  about: { out: 2.5, r: 2.6 },
+export const FOOTPRINTS: Record<string, { out: number; r: number; lot: [number, number] }> = {
+  fashionhub: { out: 3.9, r: 3.4, lot: [9, 6.9] },
+  sprig: { out: 3.9, r: 3.3, lot: [9, 6.9] },
+  lumenfold: { out: 3.9, r: 2.4, lot: [5.4, 6.9] },
+  bagyo: { out: 3.9, r: 3.2, lot: [10, 6.9] },
+  recipes: { out: 3.4, r: 3.3, lot: [9, 6.9] },
+  about: { out: 3.6, r: 3.6, lot: [14, 14] },
 };
+
+/** The plot of block each landmark claims, as a rectangle in world x/z, index-aligned with `stops`. */
+export const LOTS: Box[] = stops.map((s) => {
+  const { front, facing } = site(s.id);
+  const [w, d] = FOOTPRINTS[s.id].lot;
+  const x = front.x - facing.x * (d / 2);
+  const z = front.z - facing.z * (d / 2);
+  return facing.x ? { x, z, hx: d / 2, hz: w / 2 } : { x, z, hx: w / 2, hz: d / 2 };
+});
 
 /** Each stop's landmark as a circle, index-aligned with `stops`: where its sign floats and its click area stands. */
 export const LANDMARKS: Circle[] = stops.map((s) => {

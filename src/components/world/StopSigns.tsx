@@ -7,8 +7,8 @@ import { Vector3, type Camera, type Object3D } from "three";
 import { stops } from "@/lib/stops";
 import { LANDMARKS } from "@/lib/world";
 
-/** How high each sign floats: just above the roof. The lighthouse's sits halfway up, or it's off the top of the screen. */
-const HEIGHT: Record<string, number> = { fashionhub: 3.6, sprig: 3.3, lumenfold: 5, bagyo: 5, recipes: 3.6, about: 3.4 };
+/** How high each sign floats: just above the roof. Lumenfold's sits by its roof lamp's arm, not above it, or it's off the top of the screen. */
+const HEIGHT: Record<string, number> = { fashionhub: 7.4, sprig: 7.0, lumenfold: 6.4, bagyo: 7.4, recipes: 4.4, about: 4.8 };
 
 const at = new Vector3();
 const base = new Vector3();

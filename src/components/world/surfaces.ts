@@ -28,6 +28,7 @@ export const SURFACE_OF: Record<string, number> = {
   "#3d7a3f": SURFACE.leaf, // LEAF_DARK
   "#73b357": SURFACE.leaf, // GRASS_TUFT
   "#2f6b3a": SURFACE.cloth, // SHADE net
+  "#e98a3a": SURFACE.cloth, // the carinderia's tarp
   // Town.tsx
   "#8cc56b": SURFACE.grass, // the plaza lawn
   "#b9b2a4": SURFACE.plaster, // kerbs

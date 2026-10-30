@@ -88,6 +88,11 @@ button,
   @apply sign bg-red text-white;
 }
 
+/* A route marker: the same pressable sign as a circle (the turn control's bay compass). */
+@utility marker {
+  @apply sign size-11 rounded-full px-0;
+}
+
 /* A plate that only labels: no ledge, it doesn't press. */
 @utility plate {
   @apply inline-flex items-center rounded-lg border-2 border-ink bg-yellow font-display font-semibold text-ink;

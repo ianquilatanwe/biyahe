@@ -18,7 +18,7 @@ so often the terminal's jeepney pulls out for a lap of the town.
 
 ## How to drive
 
-- **Keyboard:** W A S D or the arrow keys. Park next to a landmark and press **E** (or the "Open" button) to see its project.
+- **Keyboard:** W A S D or the arrow keys. Park next to a landmark and press **F** (or the "Open" button) to see its project. **Q** and **E** turn the view.
 - **Mouse or touch:** click or tap the ground and the jeepney drives itself there. Click a landmark to drive to it and open its card.
 - **Horn:** **H** honks. The jeepney also beeps twice when it arrives at a stop.
 - **No driving at all:** the stop buttons along the bottom drive you to each stop and open its card.

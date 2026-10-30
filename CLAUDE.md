@@ -77,7 +77,7 @@ everything is built from code primitives (Ian chose code over Blender for the je
   300 tap trips: no overlaps, no jams. Each kind is one `Fleet` (instanced `Batched` model, Batched.tsx): 2 draw calls
   per kind. `weathered()` handles `instanceMatrix`, so the clouds pass over instanced copies too.
 - Click areas are invisible meshes (`<meshBasicMaterial visible={false} />`): raycast, but no draw call.
-- **The camera turns in quarter turns** (⟲/⟳ buttons and `,` `.`; `turns` ref → the Driver eases `heading`), north
+- **The camera turns in quarter turns** (⟲/⟳ buttons and Q/E, the bay compass between them faces the bay again; `turns` ref → the Driver eases `heading`), north
   by default. The layout still favours north (stops face south or sideways, tall things in the north row, the south
   row low), but every side is now seen: whatever the north view never showed comes from shophouse.ts's second random
   stream (`Detail.extra`), so adding it never reshuffles the town. Past the edge rows, cheap `farHouse` rows run out to
@@ -162,7 +162,7 @@ everything is built from code primitives (Ian chose code over Blender for the je
 - Keys only drive while the island is on screen; arrows and Space scroll the page otherwise. Space brakes, except on a
   focused button or link, where it presses it.
 - The in-world signs are mouse/touch only (no focus inside the aria-hidden wrapper); the keyboard gets the stop buttons,
-  E, and an Open button that is visually hidden until focused.
+  F, and an Open button that is visually hidden until focused.
 
 ## Process
 - Four-day time box with a clip after each day; follow `~/upwork/CLAUDE.md` (no unannounced

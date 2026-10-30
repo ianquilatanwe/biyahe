@@ -215,8 +215,14 @@ One component for the island's dialog and the route board, so they can't drift.
 ### Navigation (the stop strip)
 A row of yellow signs strung along a short ink road with yellow dashes; wraps to two rows on a phone with the road between them.
 
+### Turn control
+Bottom-right, right of the driving hint (from 1280px, beside the stop strip): two square yellow signs with drawn
+curved arrows (Q and E key caps inside them from 768px) either side of a round route marker. The marker's needle,
+with the sea's waves past its tip, always points at the bay, so it turns against the view (500ms ease-out, none under
+reduced motion); pressing it turns the view back to face the bay.
+
 ### In-world stop signs
-Yellow signs floating over each landmark with a tail pointing down at it, bobbing 4px. Parked at a stop the sign turns red and reads "Open …" with an E key cap. A landmark out of frame keeps its sign at the screen edge, turned paper, its tail aimed off-screen at the landmark. Signs shrink to 85% with distance.
+Yellow signs floating over each landmark with a tail pointing down at it, bobbing 4px. Parked at a stop the sign turns red and reads "Open …" with an F key cap. A landmark out of frame keeps its sign at the screen edge, turned paper, its tail aimed off-screen at the landmark. Signs shrink to 85% with distance.
 
 ### Road paint
 The ink road with a 3px yellow dash (14 on, 12 off) runs horizontally under the island and vertically down the route board. The flank stripes (red 10px, yellow 6px, teal 10px on ink, 3px gaps) mark each seam between island, board and pier.

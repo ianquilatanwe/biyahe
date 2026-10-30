@@ -32,7 +32,7 @@ export function IslandExperience() {
   const box = useRef<HTMLDivElement>(null);
   const destination = useRef<Destination | null>(null); // read by the frame loop every frame
   const turns = useRef(0); // quarter turns of the view, clockwise from north; the frame loop eases the camera round
-  const [facing, setFacing] = useState(0); // the same, 0..3, for the compass
+  const [turned, setTurned] = useState(0); // the same, for the compass
   const [onScreen, setOnScreen] = useState(true);
   const [nearId, setNearId] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -68,29 +68,28 @@ export function IslandExperience() {
     goTo({ ...parkingSpot(stop.id), stopId: id });
     setStatus(`Driving to ${stop.name}. Its card opens when you arrive.`);
   }, [goTo]);
-  const turn = useCallback((by: 1 | -1) => {
-    turns.current += by;
-    const f = ((turns.current % 4) + 4) % 4;
-    setFacing(f);
-    setStatus(`Facing ${FACING[f]}.`);
+  const turnTo = useCallback((n: number) => {
+    turns.current = n;
+    setTurned(n);
+    setStatus(`Facing ${FACING[((n % 4) + 4) % 4]}.`);
   }, []);
   const openStop = useCallback((id: string | null) => {
     setStatus(""); // so the next drive is announced again, even to the same stop
     setOpenId(id);
   }, []);
 
-  // E opens the stop you're parked at (the same action as clicking the prompt); comma and full stop turn the view.
+  // F opens the stop you're parked at (the same action as clicking the prompt); Q and E turn the view.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!isPlainKey(e) || !onScreen) return;
-      if (e.code === "KeyE" && nearId && !openId) openStop(nearId);
+      if (e.code === "KeyF" && nearId && !openId) openStop(nearId);
       if (e.code === "KeyH" && !e.repeat) sound.horn();
-      if ((e.code === "Comma" || e.code === "Period") && !e.repeat && !openId) turn(e.code === "Comma" ? -1 : 1);
+      if ((e.code === "KeyQ" || e.code === "KeyE") && !e.repeat && !openId) turnTo(turns.current + (e.code === "KeyQ" ? -1 : 1));
       if (/^(Key[WASD]|Arrow)/.test(e.code)) setMoved(true);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [nearId, openId, onScreen, openStop, turn]);
+  }, [nearId, openId, onScreen, openStop, turnTo]);
 
   const near = stops.find((s) => s.id === nearId);
   const open = stops.find((s) => s.id === openId) ?? null;
@@ -126,14 +125,15 @@ export function IslandExperience() {
             <button
               type="button"
               onClick={() => openStop(near.id)}
-              aria-keyshortcuts="E"
+              aria-keyshortcuts="F"
               className="sign-red sr-only pointer-events-auto px-6 text-lg focus:not-sr-only"
             >
               Open {near.name}
             </button>
           )}
-          {/* The driving hint on the left, the view's turn buttons on the right (they wrap under it below ~340 px). */}
-          <div className="flex w-full max-w-3xl flex-wrap items-center justify-between gap-2">
+          {/* The driving hint, and the turn control on its right (it wraps under the hint below ~350 px). From 1280 px
+              there's room beside the stop strip, so the control moves down there and the hint centres again. */}
+          <div className="flex w-full max-w-3xl flex-wrap items-center justify-between gap-2 xl:justify-center">
             <p
               className={`plate bg-paper px-3 py-1 text-sm font-medium transition-opacity duration-500 motion-reduce:transition-none ${moved ? "opacity-0" : ""}`}
             >
@@ -142,18 +142,11 @@ export function IslandExperience() {
               </span>
               <span className="md:hidden">Tap the ground to drive there</span>
             </p>
-            <div role="group" aria-label="Turn the view" className="pointer-events-auto ml-auto flex items-center gap-1">
-              <button type="button" onClick={() => turn(-1)} aria-keyshortcuts="," aria-label="Turn left" className="sign grid size-11 place-items-center">
-                <TurnArrow />
-              </button>
-              {/* The compass: which way the camera looks. Screen readers hear it from the live region when it changes. */}
-              <span aria-hidden="true" className="plate grid size-9 place-items-center bg-paper font-display text-sm">
-                {FACING[facing][0].toUpperCase()}
-              </span>
-              <button type="button" onClick={() => turn(1)} aria-keyshortcuts="." aria-label="Turn right" className="sign grid size-11 place-items-center">
-                <TurnArrow right />
-              </button>
-            </div>
+            <TurnControls
+              turned={turned}
+              onTurn={turnTo}
+              className="ml-auto xl:absolute xl:right-5 xl:bottom-[max(0.75rem,env(safe-area-inset-bottom))]"
+            />
           </div>
           <nav aria-label="Stops" className="pointer-events-auto relative w-full max-w-3xl">
             {/* The stops sit along a short stretch of road (between the two rows on a phone). */}
@@ -183,14 +176,59 @@ export function IslandExperience() {
   );
 }
 
+/**
+ * Turns the view a quarter at a time (Q and E do the same). Between the two arrows sits a route marker whose needle
+ * always points at the bay, the one thing in town everyone can place, so it turns the opposite way to the view; pressing
+ * it turns the view back to face the bay. `turned` isn't wrapped to 0..3, so the needle always turns the short way.
+ */
+function TurnControls({ turned, onTurn, className }: { turned: number; onTurn: (to: number) => void; className: string }) {
+  return (
+    <div role="group" aria-label="Turn the view" className={`pointer-events-auto flex items-center gap-2 ${className}`}>
+      <button type="button" onClick={() => onTurn(turned - 1)} aria-keyshortcuts="Q" className="sign px-2.5">
+        <span className="sr-only">{"Turn left "}</span>
+        <TurnArrow />
+        <KeyCap>Q</KeyCap>
+      </button>
+      <button type="button" onClick={() => onTurn(Math.round(turned / 4) * 4)} aria-label="Face the bay" className="marker">
+        <svg
+          viewBox="0 0 44 44"
+          aria-hidden="true"
+          className="size-full transition-transform duration-500 ease-out motion-reduce:transition-none"
+          style={{ transform: `rotate(${-turned * 90}deg)` }}
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          {/* A compass needle, its red-deep half pointing at the bay (red lettering on yellow is always red-deep), the
+              ink half behind, and the bay's waves past its tip. */}
+          <path d="M22 13l5 11h-10z" fill="var(--color-red-deep)" stroke="var(--color-red-deep)" strokeWidth="1.5" />
+          <path d="M17 24h10l-5 11z" fill="var(--color-ink)" stroke="var(--color-ink)" strokeWidth="1.5" />
+          <path d="M14.5 9q1.9-2.6 3.75 0t3.75 0 3.75 0 3.75 0" stroke="var(--color-sea)" strokeWidth="2.25" />
+          <circle cx="22" cy="24" r="1.4" fill="var(--color-yellow)" />
+        </svg>
+      </button>
+      <button type="button" onClick={() => onTurn(turned + 1)} aria-keyshortcuts="E" className="sign px-2.5">
+        <span className="sr-only">{"Turn right "}</span>
+        <KeyCap>E</KeyCap>
+        <TurnArrow right />
+      </button>
+    </div>
+  );
+}
+
 /** A curved arrow for the turn buttons: anticlockwise, or clockwise when `right`. */
 function TurnArrow({ right = false }: { right?: boolean }) {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className={`size-5 ${right ? "-scale-x-100" : ""}`} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={`size-5 ${right ? "-scale-x-100" : ""}`} fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
       <path d="M3 3v5h5" />
     </svg>
   );
+}
+
+/** A key cap inside a turn button, shown where there's a keyboard to press it (from 768 px); part of the button's name. */
+function KeyCap({ children }: { children: React.ReactNode }) {
+  return <kbd className="hidden rounded border-2 border-ink bg-paper px-1 font-display text-xs leading-tight md:inline">{children}</kbd>;
 }
 
 /** A keyboard key in the driving hint. */

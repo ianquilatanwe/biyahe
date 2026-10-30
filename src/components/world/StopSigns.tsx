@@ -147,7 +147,7 @@ export function StopSigns({ nearId, onStop, onOpen }: { nearId: string | null; o
               className={`${near ? "sign-red" : "sign group-data-[edge=true]:bg-paper"} pointer-events-auto relative min-h-9 px-3 text-sm select-none`}
             >
               {near ? `Open ${s.name}` : s.name}
-              {near && <kbd className="ml-1 hidden rounded border-2 border-white/70 px-1 font-display text-xs leading-tight md:inline">E</kbd>}
+              {near && <kbd className="ml-1 hidden rounded border-2 border-white/70 px-1 font-display text-xs leading-tight md:inline">F</kbd>}
               {/* The tail: the plate's own fill and rim, pinned to its border, turned square to that edge, its tip
                   leaning to point (skewed round its base, so the base stays on the edge; -2px: positions count from inside the rim). */}
               <span aria-hidden="true" className="absolute top-[calc(var(--py)-2px)] left-[calc(var(--px)-2px)] size-0 [rotate:var(--rot)]">

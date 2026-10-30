@@ -131,21 +131,19 @@ export function IslandExperience() {
               Open {near.name}
             </button>
           )}
-          {/* The driving hint, and the turn control on its right (it wraps under the hint below ~350 px). From 1280 px
-              there's room beside the stop strip, so the control moves down there and the hint centres again. */}
-          <div className="flex w-full max-w-3xl flex-wrap items-center justify-between gap-2 xl:justify-center">
+          {/* Phones: the turn control alone, centred over the stops (their hint floats mid-screen, TapHint). From 768 px
+              the keyboard hint sits on the left and the control on its right; from 1280 px there's room beside the stop
+              strip, so the control moves down there and the hint centres again. */}
+          <div className="flex w-full max-w-3xl flex-wrap items-center justify-center gap-2 md:justify-between xl:justify-center">
             <p
-              className={`plate bg-paper px-3 py-1 text-sm font-medium transition-opacity duration-500 motion-reduce:transition-none ${moved ? "opacity-0" : ""}`}
+              className={`plate bg-paper px-3 py-1 text-sm font-medium transition-opacity duration-500 motion-reduce:transition-none max-md:hidden ${moved ? "opacity-0" : ""}`}
             >
-              <span className="hidden md:inline">
-                Drive with <Key>W</Key> <Key>A</Key> <Key>S</Key> <Key>D</Key> or the arrows, <Key>Space</Key> to brake, <Key>H</Key> to honk, or click the ground
-              </span>
-              <span className="md:hidden">Tap the ground to drive there</span>
+              Drive with <Key>W</Key> <Key>A</Key> <Key>S</Key> <Key>D</Key> or the arrows, <Key>Space</Key> to brake, <Key>H</Key> to honk, or click the ground
             </p>
             <TurnControls
               turned={turned}
               onTurn={turnTo}
-              className="ml-auto xl:absolute xl:right-5 xl:bottom-[max(0.75rem,env(safe-area-inset-bottom))]"
+              className="md:ml-auto xl:absolute xl:right-5 xl:bottom-[max(0.75rem,env(safe-area-inset-bottom))]"
             />
           </div>
           <nav aria-label="Stops" className="pointer-events-auto relative w-full max-w-3xl">
@@ -170,9 +168,47 @@ export function IslandExperience() {
         </div>
       )}
 
+      {island === "ready" && <TapHint gone={moved} />}
       <StopCard stop={open} onClose={() => setOpenId(null)} />
       <TuningPanel />
     </>
+  );
+}
+
+/**
+ * Phones: the driving hint floats mid-screen just below the jeepney, a hand tapping the ground there and the tap
+ * marker's four chevrons (TapMarker, about the size they land at) appearing at its fingertip, until the first drive.
+ * Taps pass through it to the island. It never sits lower than 25rem from the bottom, so on a short phone it stays
+ * clear of the turn control and the stops. Reduced motion: the hand rests on the spot, the chevrons stay still.
+ */
+function TapHint({ gone }: { gone: boolean }) {
+  // One chevron of the tap marker, pointing in at the spot from the right (TapMarker's shape at 10 px a metre).
+  const chevron = "M7.5 0L12 4.2h2.1L9.6 0l4.5-4.2H12z";
+  return (
+    <div
+      className={`pointer-events-none absolute inset-x-0 top-[min(calc(50%+2rem),calc(100%-25rem))] z-10 flex flex-col items-center gap-1 transition-opacity duration-500 motion-reduce:transition-none md:hidden ${gone ? "opacity-0" : ""}`}
+    >
+      <svg viewBox="0 0 64 80" aria-hidden="true" className="h-32 w-[6.4rem] overflow-visible">
+        <g transform="translate(32 34) scale(1.5)">
+          <g className="origin-center [transform-box:fill-box] motion-safe:animate-tap-mark">
+            {[0, 90, 180, 270].map((a) => (
+              <g key={a} transform={`rotate(${a})`}>
+                <path d={chevron} transform="translate(0 1.5)" fill="var(--color-ink)" />
+                <path d={chevron} fill="var(--color-yellow)" stroke="var(--color-ink)" strokeWidth="1" strokeLinejoin="round" />
+              </g>
+            ))}
+          </g>
+        </g>
+        {/* A pointing hand, its fingertip on the spot. */}
+        <g className="motion-safe:animate-tap-hand">
+          <g transform="translate(19.4 31.2) scale(1.4)" fill="var(--color-paper)" stroke="var(--color-ink)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15V4a2 2 0 0 1 4 0v5.5V9a2 2 0 0 1 4 0v1a2 2 0 0 1 4 0z" />
+            <path d="M11 9.5V13M15 10v3M19 11v2" fill="none" />
+          </g>
+        </g>
+      </svg>
+      <p className="plate bg-paper px-3 py-1 text-sm font-medium">Tap the ground to drive there</p>
+    </div>
   );
 }
 

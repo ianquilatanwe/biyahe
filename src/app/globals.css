@@ -23,6 +23,43 @@
     }
   }
 
+  /* The phone's tap hint: a hand presses the ground, and the tap marker's chevrons land at its fingertip and pulse in. */
+  --animate-tap-hand: tap-hand 1.8s ease-in-out infinite;
+  @keyframes tap-hand {
+    0%,
+    70%,
+    100% {
+      transform: translate(0, -7px);
+    }
+    28%,
+    42% {
+      transform: translate(0, 0) scale(0.94);
+    }
+  }
+  --animate-tap-mark: tap-mark 1.8s ease-out infinite;
+  @keyframes tap-mark {
+    0%,
+    26% {
+      opacity: 0;
+      transform: scale(1.7);
+    }
+    36% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    58% {
+      transform: scale(0.84);
+    }
+    78% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(1);
+    }
+  }
+
   /* The chevron under each landmark's sign, pointing at the building. */
   --animate-bob: bob 1.4s ease-in-out infinite;
   @keyframes bob {

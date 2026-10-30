@@ -216,8 +216,9 @@ One component for the island's dialog and the route board, so they can't drift.
 A row of yellow signs strung along a short ink road with yellow dashes; wraps to two rows on a phone with the road between them.
 
 ### Turn control
-Bottom-right, right of the driving hint (from 1280px, beside the stop strip): two square yellow signs with drawn
-curved arrows (Q and E key caps inside them from 768px) either side of a round route marker. The marker's needle,
+On phones, centred in its own row just above the stops; from 768px right of the driving hint; from 1280px beside the
+stop strip. Two square yellow signs with drawn curved arrows (Q and E key caps inside them from 768px) either side of
+a round route marker. The marker's needle,
 with the sea's waves past its tip, always points at the bay, so it turns against the view (500ms ease-out, none under
 reduced motion); pressing it turns the view back to face the bay.
 
@@ -236,7 +237,12 @@ The cursor is a drawn arrow: a yellow face with ink rim and ink drop by default,
 - Drive: the loader's jeepney crosses its dashed road, 2.4s linear, looping.
 - Fade: loader and driving hint fade out over 500ms.
 - Tap marker: lands at 1.9x, settles with exponential decay, then pulses ±14%.
-- Reduced motion: no bob, no drive (the jeepney parks centred), no fades, no landing or pulse, no smooth scroll.
+- Tap hint (phones only, until the first drive): mid-screen below the jeepney, a drawn hand (paper, ink stroke)
+  presses the ground and the tap marker's four chevrons land at its fingertip and pulse in, 1.8s loop, above a paper
+  "Tap the ground to drive there" plate. Taps pass through it; it fades with the first drive. Wider screens keep the
+  keyboard hint in the bottom row.
+- Reduced motion: no bob, no drive (the jeepney parks centred), no fades, no landing or pulse, no smooth scroll; the
+  tap hint's hand rests on the spot with the chevrons still.
 
 ## Do's and Don'ts
 
